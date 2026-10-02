@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "agent-device": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["--no-install", "agent-device", "mcp"]
+    },
+    "expo": {
+      "type": "http",
+      "url": "https://mcp.expo.dev/mcp"
+    }
+  }
+}

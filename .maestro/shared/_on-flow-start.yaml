@@ -1,0 +1,21 @@
+# Shared start for every flow: launch from a clean slate and, on a development build,
+# connect past the expo-dev-client launcher. Release-style e2e builds (EAS) skip that branch.
+# Adapted from Infinite Red's Ignite boilerplate (.maestro/shared/_OnFlowStart.yaml, MIT).
+appId: ${MAESTRO_APP_ID}
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: 'Development servers'
+    commands:
+      - tapOn: 'http://.*:.*'
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible: 'Close'
+          commands:
+            - tapOn: 'Close'

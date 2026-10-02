@@ -1,0 +1,27 @@
+# Runs smoke-tagged Maestro flows on an Android emulator build. See e2e-ios.yml for setup notes.
+name: E2E Android
+
+on:
+  pull_request_labeled:
+    labels: [e2e]
+
+jobs:
+  build:
+    name: Build Android APK (e2e-test)
+    type: build
+    params:
+      platform: android
+      profile: e2e-test
+
+  maestro:
+    name: Maestro smoke flows
+    type: maestro
+    needs: [build]
+    env:
+      MAESTRO_APP_ID: com.example.expoapptemplate.preview
+    params:
+      build_id: ${{ needs.build.outputs.build_id }}
+      flow_path: ./.maestro/flows
+      include_tags: [smoke]
+      retries: 1
+      record_screen: true
