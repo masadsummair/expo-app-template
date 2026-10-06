@@ -2,39 +2,143 @@
 
 A production starting point for English-only mobile MVPs, built so AI coding agents (Claude Code first, plus Codex,
 Cursor, Copilot and Gemini CLI) can plan, build, test on a device, review and ship features with project-specific rules,
-skills, agents and hooks. Phone-first, portrait.
+skills, agents and hooks. Phone-first, portrait. One codebase for iOS and Android.
 
-**Stack:** Expo SDK 57 · React Native 0.86 · React 19.2 + React Compiler · TypeScript strict · Expo Router ·
-Uniwind (Tailwind 4) · Zustand · TanStack Query · React Hook Form + zod · MMKV · expo-secure-store · Sentry ·
-Jest + RNTL · e2e (tester-army) · EAS · bun.
+**Contents:** [At a glance](#at-a-glance) · [What you need](#what-you-need) ·
+[Tools by category](#tools-by-category) · [What's in the app](#whats-in-the-app) ·
+[Start a new app](#start-a-new-app-from-this-template) · [AI tools](#ai-tools) · [Commands](#everyday-commands) ·
+[Feature workflow](#building-a-feature-with-an-agent) · [E2E](#e2e-testing-tester-armye2e) · [Release](#release-and-ops) ·
+[CI](#ci)
 
-## Platform support
+## At a glance
 
-| Your computer | Run the app | Build iOS | Build Android | e2e tests + `e2e` MCP |
-|---|---|---|---|---|
-| macOS | iOS simulator, Android | local (Xcode) or EAS | local or EAS | iOS and Android |
-| Linux | Android | EAS cloud | local or EAS | Android |
-| Windows | Android | EAS cloud | local or EAS | WSL2 only |
+| Area | Supported |
+|---|---|
+| Mobile platforms | iOS and Android (development builds; iPad runs the iPhone layout) |
+| Your computer | macOS, Linux, Windows (iOS builds without a Mac go through EAS) |
+| AI coding tools | Claude Code (skills, subagents, hooks, MCP), Codex, Cursor, GitHub Copilot, Gemini CLI |
+| AI kit | 25 skills (13 authored, 11 vendored, 1 adapted), 7 subagents, 3 hooks, 2 MCP servers |
+| Testing | unit tests, on-device e2e tests, 9 checks in one `bun run verify` |
+| CI | GitHub Actions on Linux, Windows and macOS, plus Android e2e on an emulator |
+| Releases | EAS Build, Submit and Update (OTA), three app variants |
 
-iOS needs a Mac for local builds and the simulator. Without one, EAS builds iOS in the cloud
-(`bun run eas build --profile development-device --platform ios`) and you install it on a registered iPhone.
-Everything else (`verify`, hooks, the agents) is built to run on all three systems. Verified so far on macOS only (iOS
-simulator, Android emulator); Windows and Linux are untested until the CI matrix runs. iOS e2e is not in CI.
+Verified so far on macOS (iOS simulator, Android emulator). Windows and Linux
+are built for and covered by the CI matrix. Not yet checked: a physical iPhone, screen readers by ear, haptics feel.
 
-## Prerequisites
-
-Everywhere: [bun](https://bun.sh) ≥ 1.3.7, Node ≥ 22.12 (`.node-version` and CI use 24), Git.
+## What you need
 
 | | macOS | Linux | Windows |
 |---|---|---|---|
-| Android | Android Studio + SDK, a JDK (Android Studio's works) | same | same; keep the repo path short (long paths break native builds) |
-| iOS | Xcode (older Swift toolchains fail, see `AGENTS.md` Gotchas) | EAS only | EAS only |
+| Always | bun ≥ 1.3.7, Node ≥ 22.12, Git | same | same, plus Git for Windows (Claude Code uses its bash) |
+| Android | Android Studio + SDK and its JDK | same | same; keep the repo path short (long paths break native builds) |
+| iOS | Xcode ≥ 26.4 (older toolchains fail, see `AGENTS.md` Gotchas) | EAS cloud build only | EAS cloud build only |
 | `ANDROID_HOME` | `~/Library/Android/sdk` | `~/Android/Sdk` | `%LOCALAPPDATA%\Android\Sdk` |
 | `JAVA_HOME` | `/Applications/Android Studio.app/Contents/jbr/Contents/Home` | Android Studio's `jbr` folder | `C:\Program Files\Android\Android Studio\jbr` |
+| e2e tests | iOS and Android | Android | inside WSL2 (upstream: "On Windows, run inside WSL") |
 
-Claude Code on Windows also needs Git for Windows. For e2e on Windows install WSL2 and run the e2e commands inside it
-(upstream: "On Windows, run inside WSL"; sharing the Windows emulator with WSL is untested). Shell snippets in the skills are
-bash; in PowerShell write `$env:NAME = 'x'` instead of `NAME=x cmd`.
+Accounts: an [Expo](https://expo.dev) account for EAS (free tier works for development builds). Optional: an Apple
+Developer account (iOS devices and the App Store), a Google Play account, Sentry, and an Anthropic API key for the AI
+steps in e2e tests. `.node-version` and CI use Node 24. Shell snippets in the skills are bash; in PowerShell write
+`$env:NAME = 'x'` instead of `NAME=x cmd`.
+
+## Tools by category
+
+### App framework
+
+| Tool | What it does here |
+|---|---|
+| Expo SDK 57 | native modules, config plugins, development builds (not Expo Go) |
+| React Native 0.86 · React 19.2 | New Architecture, Hermes, React Compiler (no manual memoisation) |
+| TypeScript (strict) | the whole app, scripts and hooks |
+| Expo Router | file-based routes in `src/app`, native Stack, `Stack.Protected` auth guard, native form sheets |
+
+### UI, styling and motion
+
+| Tool | What it does here |
+|---|---|
+| Uniwind (Tailwind 4) | `className` styling with light/dark design tokens in `src/global.css` |
+| `@/components/ui` | the template's UI kit (see [What's in the app](#whats-in-the-app)) |
+| Reanimated 4 + Worklets | animations, with presets in `src/lib/motion.ts` that follow reduce-motion |
+| Gesture Handler | gestures and the root gesture view |
+| react-native-keyboard-controller | keyboard-aware scrolling and a footer pinned above the keyboard |
+| react-native-safe-area-context | safe-area insets (Android is edge-to-edge) |
+| FlashList | long lists, with pull to refresh |
+| expo-image | images with caching and recycling |
+| expo-symbols | icons: SF Symbols on iOS, Material Symbols on Android |
+| sonner-native + react-native-svg | toasts |
+| expo-haptics | haptics with native constants per platform |
+| expo-splash-screen · expo-status-bar · expo-system-ui | splash, status bar and root background per theme |
+
+### Data, state and forms
+
+| Tool | What it does here |
+|---|---|
+| TanStack Query | server data, wired to network status and app focus |
+| zod | validates API responses, env vars, forms and persisted state |
+| Zustand | client state (auth, theme) |
+| react-native-mmkv | fast local storage for persisted state |
+| expo-secure-store | the auth token |
+| React Hook Form + `@hookform/resolvers` | forms with zod validation |
+| expo-network | online/offline detection and the offline banner |
+
+### Errors, updates and app info
+
+| Tool | What it does here |
+|---|---|
+| Sentry (`@sentry/react-native`) | crash reporting, on only when `EXPO_PUBLIC_SENTRY_DSN` is set |
+| expo-updates | OTA updates with an in-app "Restart" prompt |
+| expo-constants · expo-linking · expo-font | app version, deep links, icon font preloading |
+
+### Build and release
+
+| Tool | What it does here |
+|---|---|
+| EAS Build / Submit / Update (`bun run eas`) | cloud builds, store submission, OTA updates; eas-cli pinned to one version |
+| expo-dev-client | the development build you run day to day |
+| `@expo/fingerprint` | runtime versions and the "native change, no OTA" gate |
+| expo-doctor | dependency and config checks |
+
+### Testing and quality
+
+| Tool | What it does here |
+|---|---|
+| Jest + React Native Testing Library | unit and component tests |
+| tester-army `e2e` | on-device e2e tests and the `e2e` MCP server (agents drive the device) |
+| ESLint (expo config) | lint, including React Compiler rules |
+| `scripts/check-contrast.ts` | WCAG AA contrast for every colour pair, both themes |
+| `scripts/check-privacy-manifest.ts` | iOS privacy-manifest reasons for every native dependency |
+| `scripts/check-docs.ts` · `scripts/lint-claude.ts` | docs match the repo; skills and agents are valid |
+
+### AI agent kit
+
+| Tool | What it does here |
+|---|---|
+| `AGENTS.md` | the rules every agent follows (CLAUDE.md and GEMINI.md import it) |
+| Skills (`.claude/skills`, copy in `.agents/skills`) | step-by-step playbooks for common tasks (see [Skills](#skills)) |
+| Subagents (`.claude/agents`) | reviewers, auditors, device tester, docs keeper, SDK upgrader |
+| Hooks (`.claude/hooks`) | guardrails that block risky commands in Claude Code |
+| MCP servers | `e2e` (drive the emulator/simulator) and `expo` (Expo docs + EAS) |
+| Evals (`evals/`) | opt-in, paid checks that each skill triggers on the right requests |
+
+### CI and repo
+
+| Tool | What it does here |
+|---|---|
+| GitHub Actions | checks on Linux, Windows and macOS; Android e2e on an emulator; Copilot setup |
+| Dependabot | keeps the pinned GitHub Actions current |
+| bun | package manager and script runner (never npm, yarn or pnpm) |
+| `.gitattributes` · `.editorconfig` | LF line endings, so Windows checkouts don't break scripts |
+
+## What's in the app
+
+| Part | Details |
+|---|---|
+| UI kit | Screen, Text, Button, TextField, Card, Divider, ListItem, Icon, Image, Avatar, Badge, Switch, LoadingView, EmptyState, ErrorState, RefreshableList, PressableScale, SheetHeader. Each has a testID, accessibility role and label, 44pt/48dp tap targets and both themes. |
+| Screens | mock sign-in (keyboard flow, inline validation), Home, Settings (theme, sign out, delete account with confirmation), About form sheet, route error boundaries, offline banner |
+| Layout | `Screen` caps content at 576dp and centres it on tablets and foldables, applies safe-area insets on every side, and pins a form's main button above the keyboard. Checked at 360dp, 800dp, iPhone SE and large text. |
+| Helpers (`src/lib`) | API client (typed results, cancellable, refuses other hosts), error messages, toast and confirm, haptics, motion presets, screen-reader announcements, analytics adapter, crash reporting, storage |
+| Hooks (`src/hooks`) | online status, refresh on focus, debounced value, OTA update check |
+| Config | zod-validated env (`src/config/env.ts`), feature flags, three variants (development, preview, production) with their own bundle ids, iOS privacy manifest, export-compliance flag |
 
 ## Start a new app from this template
 
@@ -44,8 +148,8 @@ bash; in PowerShell write `$env:NAME = 'x'` instead of `NAME=x cmd`.
    bun run rename --id com.acme.app --name "Acme" --slug acme-app
    ```
    This sets the bundle id, display name, slug and URL scheme in `app.config.ts` and `e2e/support/build-mode.ts`, the
-   package name and this README's title, and the example ids in specs and skills. Replace the copyright holder in
-   `LICENSE` yourself. If `ios/` or `android/` already exist, run `bunx expo prebuild --clean` afterwards.
+   package name and this README's title, and the example ids in specs, skills and agents. Then run `bun install` and
+   `bun run skills:sync`. If `ios/` or `android/` already exist, run `bunx expo prebuild --clean` afterwards.
 3. **EAS:** `bun run eas login`, then `bun run eas init`. Paste the printed project id into
    `EAS_PROJECT_ID` in `app.config.ts` (a dynamic config can't be edited by `eas init`); that also enables EAS Update.
 4. **Env:** `cp .env.example .env` (PowerShell: `Copy-Item .env.example .env`) and set `EXPO_PUBLIC_API_URL` for local
@@ -54,7 +158,8 @@ bash; in PowerShell write `$env:NAME = 'x'` instead of `NAME=x cmd`.
 5. **First run** (a development build, not Expo Go; the first build takes several minutes):
    - macOS: `bun run ios` or `bun run android`
    - Linux / Windows: start an Android emulator or plug in a device with USB debugging, then `bun run android`
-   - iOS without a Mac: the EAS build above; later sessions only need `bun run start` to serve JS.
+   - iOS without a Mac: `bun run eas build --profile development-device --platform ios`, install it on a registered
+     iPhone; later sessions only need `bun run start` to serve JS.
 6. **Replace the mock sign-in** in `src/app/sign-in.tsx` with your auth provider. The mock accepts any credentials, so it
    refuses to sign in on production builds.
 7. **Crash reporting (optional):** set `EXPO_PUBLIC_SENTRY_DSN`, and `SENTRY_ORG` / `SENTRY_PROJECT` /
@@ -64,25 +169,107 @@ bash; in PowerShell write `$env:NAME = 'x'` instead of `NAME=x cmd`.
    In other tools: "Read AGENTS.md, then read `.claude/skills/new-feature/SKILL.md` and follow it for: add a profile
    edit screen." `specs/example-profile-edit.md` shows the spec it writes.
 
+## AI tools
+
+The project rules live in `AGENTS.md` (single source of truth); edit that, not `CLAUDE.md` or `GEMINI.md`. Skills are
+authored in `.claude/skills/`; `.agents/skills/` is a generated copy for tools that scan that folder (`bun run skills:sync`).
+
+| Tool | Instructions | Skills | Subagents | MCP config | Secret hiding |
+|---|---|---|---|---|---|
+| Claude Code | `CLAUDE.md` → `AGENTS.md` | `.claude/skills` | `.claude/agents` | `.mcp.json` | hooks and permissions (enforced) |
+| Codex | `AGENTS.md` | `.agents/skills` | read the agent file as a checklist | `.codex/config.toml` (trusted project; `codex mcp login expo`) | none |
+| Cursor | `AGENTS.md` | `.claude/skills` and `.agents/skills` (listed twice; delete `.agents/` if Cursor-only) | reads `.claude/agents` | `.cursor/mcp.json` | `.cursorignore` (indexing only) |
+| Copilot | `AGENTS.md`, `.github/copilot-instructions.md` (review checklist) | `.claude/skills` or `.agents/skills` where supported, else read the SKILL.md | read the agent file as a checklist | `.vscode/mcp.json` | none |
+| Gemini CLI | `GEMINI.md` → `AGENTS.md` | `.agents/skills` | read the agent file as a checklist | `.gemini/settings.json` (trusted folder) | `.geminiignore` (`@` sharing only) |
+
+Only Claude Code enforces the hard rules (no `.env` reads, no npm/npx, no commits on `main`, no hand edits of `ios/` or
+`android/`). Elsewhere keep the tool in its default approval mode, do not auto-run MCP tools or shell commands, and
+review diffs against `AGENTS.md`. The ignore files are best-effort: they do not cover Cursor's terminal or any tool's MCP
+calls.
+
+### Skills
+
+Authored for this template:
+
+| Category | Skill | Use it to |
+|---|---|---|
+| Workflow | `new-feature` | ship one feature end to end: spec, plan, code, unit and e2e tests, review, device check |
+| Workflow | `verify` | run every check and report real pass/fail output |
+| Workflow | `ship` | take finished work to a pull request, with approval stops before the commit and the push |
+| Build | `new-screen`, `new-component` | add a route or a reusable component with the layout, states, tokens and testIDs |
+| Build | `add-form`, `add-store`, `api-endpoint` | add a validated form, a Zustand store, or a typed API call with TanStack Query |
+| Platform | `env-secrets` | add an environment variable end to end (schema, `.env.example`, EAS visibility) |
+| Platform | `deep-links`, `push-notifications` | custom-scheme and universal links; Expo push notifications |
+| Release | `release` | build, submit, OTA update and rollback, version bumps, with a fingerprint gate |
+| Testing | `e2e-flow` | explore the device over MCP, then write and run an e2e test; screen-size checks |
+| Debugging | `debug-rn` | diagnosis loop for bugs and crashes (adapted from Matt Pocock's skills) |
+
+Vendored from upstream and pinned (`.claude/skills/SOURCES.md`; template overrides sit at the top of each):
+
+| Source | Skills |
+|---|---|
+| Expo | `expo-router`, `expo-native-ui`, `expo-animation`, `expo-data-fetching`, `expo-dev-client`, `expo-project-structure`, `expo-upgrade`, `eas-app-stores`, `eas-update` |
+| Callstack | `react-native-best-practices`, `react-native-testing` |
+
+### Subagents (`.claude/agents/`)
+
+| Category | Agent | When |
+|---|---|---|
+| Review | `rn-reviewer` | before every commit or PR: logic bugs, React Native anti-patterns, rule violations |
+| Review | `mobile-security-auditor` | auth, tokens, storage, deep links, env, network or permissions changed |
+| Review | `a11y-auditor` | UI changes: roles, labels, headings, contrast, touch targets, reduce motion, screen sizes |
+| Review | `perf-auditor` | slow screens or lists, bundle growth, new dependencies; measured evidence only |
+| Testing | `app-tester` | after UI or navigation changes: drives the device over the `e2e` MCP, then writes the e2e test |
+| Maintenance | `docs-keeper` | after changing scripts, `.claude/`, layout, env vars or the stack: fixes doc drift |
+| Maintenance | `sdk-upgrader` | moving to a newer Expo SDK; never builds production, publishes or pushes |
+
+In tools without subagents, read the agent file and follow its checklist.
+
+### Hooks and permissions (Claude Code)
+
+| Hook | Blocks or asks |
+|---|---|
+| `guard-bash` | denies npm/npx/`bun add`, `.env` and credential reads (including heredoc and `curl -F @file` tricks), env dumps, EAS secret reads, commits on `main`, force pushes, and git `--output` writes to protected files; asks before EAS submit, update, credentials and production builds |
+| `guard-files` | denies `.env` reads and edits, and edits of `ios/` and `android/`; asks before edits to configs, scripts, CI, `.claude/` and MCP files |
+| `lint-changed` | lints each file after an edit |
+| `.claude/settings.json` | asks before `git push` and `gh pr merge` |
+
+The hooks are TypeScript on bun, so they behave the same on Windows, Linux and macOS (no bash, no `jq`). A launcher
+blocks the call if a guard fails to load. They are guardrails against mistakes and prompt injection, not a sandbox;
+`bun run test:hooks` shows what they cover.
+
+### MCP servers
+
+| Server | What it does | Needs |
+|---|---|---|
+| `e2e` | lets an agent drive the emulator/simulator (observe, tap, type), then write the test | a booted device; pinned dev dependency, telemetry off, no model key; WSL2 on Windows |
+| `expo` | Expo's hosted docs and EAS server (`mcp.expo.dev`) | an Expo login; optional |
+
+Approve them when prompted (or run `/mcp` in Claude Code). The official `expo@claude-plugins-official` plugin is
+disabled on purpose: the vendored skills cost less context and carry no telemetry. Re-enable it in
+`.claude/settings.json` if you prefer automatic updates.
+
 ## Everyday commands
 
-| Command | What it does |
-|---|---|
-| `bun run verify` | typecheck, lint, unit tests, hook tests, `lint:claude`, `docs:check`, `skills:check`, `contrast:check`, `privacy:check`: run before every commit |
-| `bun run doctor` | `expo-doctor` dependency and config checks |
-| `bunx expo install <pkg>` | add a dependency at the SDK-compatible version (dev: `bunx expo install <pkg> -- --dev`) |
-| `bun run test:e2e:android` | e2e tests on the Android emulator against the dev build (forwards Metro's port with `adb reverse` first) |
-| `bun run test:e2e:ios` | e2e tests on the iOS simulator (macOS only) |
-| `bun run test:e2e` / `test:e2e:list` | all e2e targets / list the tests a run would select |
-| `bun run rename` | one-time app identity change (see above) |
-| `bun run specs:check <slug>` | fails when an acceptance criterion in `specs/<slug>.md` has no e2e test |
-| `bun run test:hooks` | tests for the Claude Code hooks |
-| `bun run lint:claude` | validates every skill and agent (frontmatter, names, descriptions, MCP tools), free |
-| `bun run docs:check` | fails when docs drift from the repo (scripts, paths, skill/agent lists, MCP configs) |
-| `bun run skills:sync` / `skills:check` | regenerate / verify the `.agents/skills` copy after editing `.claude/skills` |
-| `bun run contrast:check` | fails when a colour token pair drops below WCAG AA in either theme |
-| `bun run privacy:check` | fails when a dependency needs an iOS privacy-manifest reason missing from `app.config.ts` |
-| `bun run evals:skills` | opt-in, paid: checks each skill triggers on the right requests (`evals/README.md`) |
+| Category | Command | What it does |
+|---|---|---|
+| Run | `bun run start` / `ios` / `android` | dev server for the dev build / build and run on iOS (macOS) or Android |
+| Check | `bun run verify` | typecheck, lint, unit tests, hook tests, `lint:claude`, `docs:check`, `skills:check`, `contrast:check`, `privacy:check`: run before every commit |
+| Check | `bun run doctor` | `expo-doctor` dependency and config checks |
+| Dependencies | `bunx expo install <pkg>` | add a dependency at the SDK-compatible version (dev: `bunx expo install <pkg> -- --dev`) |
+| Release | `bun run eas <command>` | EAS CLI, pinned to one version (`eas build`, `submit`, `update`, ...) |
+| E2E | `bun run test:e2e:android` | e2e tests on the Android emulator against the dev build (forwards Metro's port with `adb reverse` first) |
+| E2E | `bun run test:e2e:ios` | e2e tests on the iOS simulator (macOS only) |
+| E2E | `bun run test:e2e` / `test:e2e:list` | all e2e targets / list the tests a run would select |
+| Setup | `bun run rename` | one-time app identity change (see above) |
+| Specs | `bun run specs:check <slug>` | fails when an acceptance criterion in `specs/<slug>.md` has no e2e test |
+| AI kit | `bun run test:hooks` | tests for the Claude Code hooks |
+| AI kit | `bun run lint:claude` | validates every skill and agent (frontmatter, names, descriptions, MCP tools), free |
+| AI kit | `bun run docs:check` | fails when docs drift from the repo (scripts, paths, skill/agent lists, MCP configs) |
+| AI kit | `bun run skills:sync` / `skills:check` | regenerate / verify the `.agents/skills` copy after editing `.claude/skills` |
+| AI kit | `bun run evals:skills` | opt-in, paid: checks each skill triggers on the right requests (`evals/README.md`) |
+| Design | `bun run contrast:check` | fails when a colour token pair drops below WCAG AA in either theme |
+| iOS | `bun run privacy:check` | fails when a dependency needs an iOS privacy-manifest reason missing from `app.config.ts` |
 
 ## Building a feature with an agent
 
@@ -115,41 +302,17 @@ Skills: `release` (build, submit, OTA update/rollback, with a fingerprint gate t
 (push needs `bunx expo install expo-notifications`, `EAS_PROJECT_ID`, FCM/APNs credentials and a new native build).
 Agent: `sdk-upgrader`. Production-affecting EAS commands are never pre-approved and always prompt.
 
-## Using AI tools
-
-The project rules live in `AGENTS.md` (single source of truth); edit that, not `CLAUDE.md` or `GEMINI.md`. Skills are
-authored in `.claude/skills/`; `.agents/skills/` is a generated copy for tools that scan that folder (`bun run skills:sync`).
-
-| Tool | Instructions | Skills | Subagents | MCP config | Secret hiding |
-|---|---|---|---|---|---|
-| Claude Code | `CLAUDE.md` → `AGENTS.md` | `.claude/skills` | `.claude/agents` | `.mcp.json` | hooks and permissions (enforced) |
-| Codex | `AGENTS.md` | `.agents/skills` | read the agent file as a checklist | `.codex/config.toml` (trusted project; `codex mcp login expo`) | none |
-| Cursor | `AGENTS.md` | `.claude/skills` and `.agents/skills` (listed twice; delete `.agents/` if Cursor-only) | reads `.claude/agents` | `.cursor/mcp.json` | `.cursorignore` (indexing only) |
-| Copilot | `AGENTS.md`, `.github/copilot-instructions.md` (review checklist) | `.claude/skills` or `.agents/skills` where supported, else read the SKILL.md | read the agent file as a checklist | `.vscode/mcp.json` | none |
-| Gemini CLI | `GEMINI.md` → `AGENTS.md` | `.agents/skills` | read the agent file as a checklist | `.gemini/settings.json` (trusted folder) | `.geminiignore` (`@` sharing only) |
-
-Only Claude Code enforces the hard rules (no `.env` reads, no npm/npx, no commits on `main`, no hand edits of `ios/` or
-`android/`): its hooks are TypeScript on bun and run on Windows, Linux and macOS. They are guardrails against mistakes
-and prompt injection, not a sandbox; `bun run test:hooks` shows what they cover. Elsewhere keep the tool in its default
-approval mode, do not auto-run MCP tools or shell commands, and review diffs against `AGENTS.md`. The ignore files are
-best-effort: they do not cover Cursor's terminal or any tool's MCP calls.
-
-In Claude Code, approve the project MCP servers when prompted (or run `/mcp`): `e2e` drives the emulator/simulator
-(pinned dev dependency, telemetry off, no model key; WSL2 on Windows), and `expo` is Expo's hosted docs and EAS server
-(`mcp.expo.dev`, needs an Expo login, optional). The official `expo@claude-plugins-official` plugin is disabled on purpose:
-the vendored skills (pinned upstream skills from Expo and Callstack, listed in `.claude/skills/SOURCES.md`) cost about a third of
-the context and carry no telemetry. Re-enable it in `.claude/settings.json` if you prefer automatic updates.
-
 ## CI
 
-- **CI** (`.github/workflows/ci.yml`): `bun run verify` and expo-doctor on Linux; most checks (no contrast, privacy or doctor) on Windows and macOS
-  (with CRLF checkout on Windows) on every PR.
-- **E2E** (`.github/workflows/e2e.yml`): builds a release-style Android APK and runs the e2e suite on an emulator for PRs
-  labelled `e2e`, pushes to `main`, or manual dispatch. No secrets needed. It has not run on GitHub yet: run it once with
-  workflow_dispatch before making it a required check. There is no iOS job.
-- **Copilot cloud agent** (`.github/workflows/copilot-setup-steps.yml`) installs bun and the dependencies before it starts.
-- **Dependabot** (`.github/dependabot.yml`) updates GitHub Actions. **CODEOWNERS** (`.github/CODEOWNERS`) is fully commented
-  out: replace the placeholder owner, uncomment it and enable "Require review from Code Owners" in branch protection.
+| Workflow | Runs |
+|---|---|
+| `.github/workflows/ci.yml` | `bun run verify` and expo-doctor on Linux; most checks (no contrast, privacy or doctor) on Windows (CRLF checkout) and macOS; every PR |
+| `.github/workflows/e2e.yml` | builds a release-style Android APK and runs the e2e suite on an emulator: PRs labelled `e2e`, pushes to `main`, manual dispatch; no secrets; no iOS job |
+| `.github/workflows/copilot-setup-steps.yml` | installs bun and the dependencies for the Copilot cloud agent |
+| `.github/dependabot.yml` | updates GitHub Actions |
+
+**CODEOWNERS** (`.github/CODEOWNERS`) is fully commented out: replace the placeholder owner, uncomment it and enable
+"Require review from Code Owners" in branch protection.
 
 ## Keeping the template current
 

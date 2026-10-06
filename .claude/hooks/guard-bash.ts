@@ -413,7 +413,8 @@ function gitOutputTargets(sub: string, rest: string[]): string[] {
 function evalGitOutput(targets: string[], dir: string, ctx: Ctx): Decision | null {
   const tmp = [tmpdir(), '/tmp'].map((t) => resolvePath(t, '/').toLowerCase());
   for (const target of targets) {
-    if (target === '' || /[~$`]/.test(target)) {
+    // Only a leading `~` is the home dir; `~` inside a path is literal (Windows short names like RUNNER~1).
+    if (target === '' || /^~|[$`]/.test(target)) {
       return deny('Blocked: git --output/-o target cannot be resolved statically. Use a literal path under the OS temp dir.');
     }
     const abs = resolvePath(target, dir);
