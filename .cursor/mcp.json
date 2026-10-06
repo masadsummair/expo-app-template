@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "e2e": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["--no-install", "e2e", "mcp"],
+      "env": { "E2E_TELEMETRY_DISABLED": "1" }
+    },
+    "expo": {
+      "type": "http",
+      "url": "https://mcp.expo.dev/mcp"
+    }
+  }
+}

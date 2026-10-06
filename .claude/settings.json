@@ -1,5 +1,125 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "enabledPlugins": {
-    "expo@claude-plugins-official": true
+    "expo@claude-plugins-official": false
+  },
+  "env": {
+    "DO_NOT_TRACK": "1",
+    "EXPO_SKILLS_TELEMETRY": "0",
+    "E2E_TELEMETRY_DISABLED": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(bun run verify)",
+      "Bash(bun run typecheck)",
+      "Bash(bun run lint)",
+      "Bash(bun run test)",
+      "Bash(bun run test *)",
+      "Bash(bun run test:hooks)",
+      "Bash(bun run lint:claude)",
+      "Bash(bun run docs:check)",
+      "Bash(bun run skills:check)",
+      "Bash(bun run contrast:check)",
+      "Bash(bun run privacy:check)",
+      "Bash(bun run doctor)",
+      "Bash(bun run test:e2e:list)",
+      "Bash(bunx expo lint *)",
+      "Bash(bunx tsc --noEmit)",
+      "Bash(bunx expo-doctor)",
+      "Bash(git status *)",
+      "Bash(git diff)",
+      "Bash(git diff --stat *)",
+      "Bash(git diff --name-only *)",
+      "Bash(git log *)"
+    ],
+    "ask": [
+      "Bash(git push)",
+      "Bash(git push *)",
+      "Bash(gh pr merge *)",
+      "Bash(bun run eas submit*)",
+      "Bash(bun run eas build *--auto-submit*)",
+      "Bash(bun run eas build *--profile production*)",
+      "Bash(bun run eas update *)",
+      "Bash(bun run eas credentials*)",
+      "Bash(bun run eas env:set*)",
+      "Bash(bun run eas env:delete*)",
+      "Bash(bun run eas env:push*)",
+      "Bash(bun run eas build:version:set*)",
+      "Bash(bun run eas build:version:sync*)"
+    ],
+    "deny": [
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.config/gh/**)",
+      "Read(~/.npmrc)",
+      "Read(~/.netrc)",
+      "Read(~/.expo/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.docker/config.json)",
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.production)",
+      "Read(./.env.development)",
+      "Read(./.env.*.local)",
+      "Read(**/*.jks)",
+      "Read(**/*.p8)",
+      "Read(**/*.p12)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/*.mobileprovision)",
+      "Read(./credentials.json)",
+      "Edit(./.env*)",
+      "Bash(gh auth token*)",
+      "Bash(gh secret *)",
+      "Bash(git * --output*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/run.ts",
+              "guard-bash"
+            ],
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Grep|Glob|Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/run.ts",
+              "guard-files"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/run.ts",
+              "lint-changed"
+            ],
+            "timeout": 60
+          }
+        ]
+      }
+    ]
   }
 }
