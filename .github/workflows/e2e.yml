@@ -70,6 +70,8 @@ jobs:
       # Release-style: the JS bundle is embedded, so there is no dev launcher and no Metro. A debug build
       # cannot run in CI because nothing serves its JS. The release type signs with the debug keystore, so no secrets.
       - name: Build release APK
+        # A failed or out-of-memory Gradle daemon can hang instead of exiting: fail the step, not the whole job.
+        timeout-minutes: 40
         env:
           EXPO_PUBLIC_API_URL: http://localhost:3000
           APP_ENV: development
@@ -77,7 +79,11 @@ jobs:
           SENTRY_DISABLE_AUTO_UPLOAD: 'true'
         run: |
           bunx expo prebuild --platform android --no-install
-          cd android && ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64
+          # The default daemon (2 GB heap, 512 MB metaspace) ran out of metaspace in the release lint pass.
+          # Lint is not needed for an e2e APK, so skip it and give the daemon more headroom.
+          cd android && ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64 \
+            -x lintVitalAnalyzeRelease -x lintVitalRelease \
+            -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
 
       # Install and test share one step: the action tears the emulator down when the step ends.
       # The second run retries only what failed, which absorbs a flaky emulator daemon on a shared runner.
