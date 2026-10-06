@@ -4,8 +4,8 @@
 // (variable indirection, encoded payloads, scripts that run other scripts) defeats them.
 import { spawnSync } from 'node:child_process';
 import { homedir, tmpdir } from 'node:os';
-import { resolve as nativeResolve } from 'node:path';
-import { classifyPath, isEnvName, projectRoot, relativeToRoot, resolvePath, runHook, toPosix, type Decision, type HookInput } from './lib';
+import { posix, resolve as nativeResolve } from 'node:path';
+import { classifyPath, ENV_FILES, globMatches, isEnvName, projectRoot, relativeToRoot, resolvePath, runHook, toPosix, type Decision, type HookInput } from './lib';
 
 export type Ctx = {
   root: string;
@@ -237,12 +237,43 @@ const INTERPRETERS = new Set(['bun', 'node', 'deno', 'python', 'python3', 'ruby'
 const NET_TOOLS = new Set(['curl', 'wget', 'http', 'https', 'xh']);
 const VALUE_FLAGS = new Set([
   '-A', '-B', '-C', '-m', '-g', '-t', '-T', '-d', '-j', '--glob', '--type', '--include', '--exclude',
-  '--exclude-dir', '--max-count', '--context', '--max-depth',
+  '--exclude-dir', '--ignore', '--iglob', '--max-count', '--context', '--max-depth',
 ]);
+// Normalised (no dashes, lower case) names of jest, eslint and bun test flags that load a file or module.
+const CODE_LOADING_FLAGS = new Set([
+  'c', 'config', 'globalsetup', 'globalteardown', 'setupfiles', 'setupfilesafterenv', 'preset', 'runner', 'testrunner',
+  'testenvironment', 'transform', 'resolver', 'reporters', 'watchplugins', 'snapshotresolver', 'testsequencer',
+  'testresultsprocessor', 'rootdir', 'roots', 'projects', 'rulesdir', 'resolvepluginsrelativeto', 'plugin', 'parser', 'preload',
+  'modulenamemapper', 'modulepaths', 'moduledirectories', 'snapshotserializers', 'coveragereporters', 'dependencyextractor', 'prettierpath', 'haste',
+]);
+const EXCLUDE_FLAGS = new Set(['--exclude', '--exclude-dir', '--ignore']);
 const PROTECTED_BRANCH = /^(main|master|develop|staging|production)$/;
 const SECRET_NAME = /(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL)/i;
-const CREDENTIAL_PATH =
-  /(^|\/)(\.ssh|\.aws|\.gnupg|\.config\/gh)(\/|$)|(^|\/)\.docker\/config\.json$|(^|\/)(\.npmrc|\.netrc|\.zshrc|\.bashrc|\.zprofile|\.bash_profile|\.envrc)$/;
+// Keep in step with the Read deny rules in .claude/settings.json (hooks.test.ts checks it).
+const CREDENTIAL_PATH = new RegExp(
+  [
+    String.raw`(^|/)(\.ssh|\.aws|\.gnupg|\.config/(gh|e2e))(/|$)`,
+    String.raw`XDG_CONFIG_HOME.*/e2e(/|$)`,
+    String.raw`(^|/)github cli(/|$)`,
+    String.raw`appdata%?/github`,
+    String.raw`(^|/)\.docker/config\.json$`,
+    String.raw`(^|/)\.expo/state\.json$`,
+    String.raw`(^|/)\.(codex/auth\.json|claude/\.credentials\.json|gemini/oauth_creds\.json)$`,
+    String.raw`(^|/)(\.npmrc|\.netrc|\.zshrc|\.bashrc|\.zprofile|\.bash_profile|\.envrc|\.git-credentials|credentials\.json)$`,
+    String.raw`\.(jks|keystore|p8|p12|pem|key|mobileprovision)$`,
+  ].join('|'),
+  'i',
+);
+const HOME_EXPO = /^(~|\$\{?home\}?|%userprofile%|\$env:userprofile)\/\.expo(\/|$)/i;
+
+function isCredentialPath(p: string, ctx: Ctx): boolean {
+  // `~/.config//e2e`, `~/.config/./e2e` and a path relative to a `cd` into the home dir name the same files.
+  const s = posix.normalize(toPosix(p));
+  const abs = resolvePath(p, ctx.cwd).toLowerCase();
+  if (CREDENTIAL_PATH.test(s) || CREDENTIAL_PATH.test(abs) || HOME_EXPO.test(s)) return true;
+  const home = toPosix(ctx.home).toLowerCase();
+  return `${abs}/`.startsWith(`${home}/.expo/`);
+}
 
 const deny = (reason: string): Decision => ({ decision: 'deny', reason });
 
@@ -363,7 +394,12 @@ function pathCandidates(cmd: string, args: string[]): string[] {
         const v = args[i + 1];
         if (v !== undefined) out.push(v);
         i++;
-      } else if (a.includes('=')) out.push(...expandRef(a.slice(a.indexOf('=') + 1)));
+      } else if (a.includes('=')) {
+        const flag = a.slice(0, a.indexOf('='));
+        const value = a.slice(a.indexOf('=') + 1);
+        // `--exclude=.env*` and `--glob=!.env*` name what to skip, not a file to read.
+        if (!(EXCLUDE_FLAGS.has(flag) || (/^--i?glob$/.test(flag) && value.startsWith('!')))) out.push(...expandRef(value));
+      }
       else if (VALUE_FLAGS.has(a) || a === '-e' || a === '--regexp') {
         const v = args[i + 1] ?? '';
         if (v.startsWith('@') || (net && v !== '')) out.push(...expandRef(v)); // curl -d @.env, curl -T .env
@@ -378,6 +414,83 @@ function pathCandidates(cmd: string, args: string[]): string[] {
     out.push(...expandRef(a)); // `key=value`, `@.env` (curl -d @.env), `f=@.env` (curl -F)
   }
   return out;
+}
+
+// Short flags that take a value, so `-ig .env` and `-g.env` both read as a value.
+const SHORT_VALUE_FLAGS = 'ABCmgtTdjefEGM';
+
+/** `flag value` / `flag=value` / `-fvalue` pairs in order, so `--exclude .env*` and `--exclude=.env*` read the same. */
+function flagPairs(args: string[], match: (flag: string) => boolean): [string, string][] {
+  const out: [string, string][] = [];
+  args.forEach((a, i) => {
+    if (!a.startsWith('-')) return;
+    const eq = a.indexOf('=');
+    const flag = eq === -1 ? a : a.slice(0, eq);
+    if (match(flag)) return void out.push([flag, eq === -1 ? (args[i + 1] ?? '') : a.slice(eq + 1)]);
+    if (a.startsWith('--')) return;
+    const at = [...a.slice(1)].findIndex((ch) => SHORT_VALUE_FLAGS.includes(ch)) + 1;
+    if (at > 0 && match(`-${a[at]}`)) out.push([`-${a[at]}`, a.slice(at + 1).replace(/^=/, '') || (args[i + 1] ?? '')]);
+  });
+  return out;
+}
+
+const flagValues = (args: string[], match: (flag: string) => boolean) => flagPairs(args, match).map(([, v]) => v);
+
+/**
+ * Recursive grep, rg/ag past their ignore rules and `git grep --untracked` read `.env` files that `cat .env` cannot,
+ * and so does rg with a glob that matches them (`-g '*'`, `-g .env`). Allowed when the sweep skips `.env*`, only
+ * includes other files, or targets a subfolder.
+ */
+function evalSweep(cmd: string, args: string[], viaGit: boolean, ctx: Ctx): Decision | null {
+  const some = (re: RegExp) => args.some((a) => re.test(a));
+  // `-rn`, `-rA2`, `-nR`: a bundle is recursive when an `r` comes before a flag that takes the rest as its value.
+  const recursiveBundle = (a: string) => {
+    if (!/^-[a-zA-Z]/.test(a)) return false;
+    for (const ch of a.slice(1)) {
+      if (ch === 'r' || ch === 'R') return true;
+      if ('ABCmefdD'.includes(ch)) return false;
+    }
+    return false;
+  };
+  let sweeping = false;
+  if (viaGit) sweeping = some(/^--(untracked|no-index|no-exclude-standard)$/);
+  else if (['grep', 'egrep', 'fgrep'].includes(cmd)) {
+    sweeping =
+      args.some(recursiveBundle) ||
+      some(/^--(dereference-)?recursive$/) ||
+      flagValues(args, (f) => f === '-d' || f === '--directories').includes('recurse');
+  } else if (cmd === 'rg' || cmd === 'ag') sweeping = some(/^(--hidden|--no-ignore.*|--unrestricted|-\.|-[a-zA-Z]*u[a-zA-Z]*)$/);
+
+  // Ordered include/exclude filters: the last one that matches a file name wins (rg, GNU grep).
+  const strip = (v: string) => v.replace(/^(\*\*\/|\/)+/, '');
+  const filters: { include: boolean; glob: string }[] = [];
+  if (cmd === 'rg') {
+    for (const [, v] of flagPairs(args, (f) => f === '-g' || /^--i?glob$/.test(f))) filters.push({ include: !v.startsWith('!'), glob: strip(v.replace(/^!/, '')) });
+  } else {
+    for (const [f, v] of flagPairs(args, (f) => ['--include', '--exclude', '--ignore'].includes(f))) filters.push({ include: f === '--include', glob: strip(v) });
+    for (const a of args) if (/^:(!|\^|\(exclude\))/.test(a)) filters.push({ include: false, glob: strip(a.replace(/^:(!|\^|\(exclude\))/, '')) });
+  }
+  const reached = (name: string) => {
+    const hit = filters.findLast((f) => globMatches(f.glob, name));
+    if (cmd === 'rg') return hit ? hit.include : sweeping && !filters.some((f) => f.include); // a matching -g glob beats `hidden`
+    return hit ? hit.include : !filters[0]?.include;
+  };
+  if (!(cmd === 'rg' ? ENV_FILES.some(reached) : sweeping && ENV_FILES.some(reached))) return null;
+  if (cmd === 'rg' && flagValues(args, (f) => f === '-t' || f === '--type').length > 0) return null;
+
+  const root = toPosix(ctx.root).toLowerCase();
+  const takesValue = (prev: string) => VALUE_FLAGS.has(prev) || (/^-[a-zA-Z]+$/.test(prev) && 'ABCmgtTdjE'.includes(prev.slice(-1)));
+  const positional = args.filter((a, i) => !a.startsWith('-') && !takesValue(args[i - 1] ?? ''));
+  const targets = args.some((a) => /^(-e|--regexp)/.test(a)) ? positional : positional.slice(1);
+  const broad = (targets.length ? targets : ['.']).some((t) => {
+    if (/^[~$%]/.test(t)) return true;
+    const abs = resolvePath(t, ctx.cwd).toLowerCase();
+    return abs === '/' || abs === root || root.startsWith(`${abs}/`);
+  });
+  if (!broad) return null;
+  return deny(
+    "Blocked: this search reaches .env files, which hold secrets. Search a subfolder, or add --exclude='.env*' (grep), -g '!.env*' (rg, ag) or ':!.env*' (git grep). An rg -g glob that matches .env counts as a sweep.",
+  );
 }
 
 function isDangerousRmTarget(target: string, ctx: Ctx): boolean {
@@ -418,7 +531,7 @@ function evalGitOutput(targets: string[], dir: string, ctx: Ctx): Decision | nul
       return deny('Blocked: git --output/-o target cannot be resolved statically. Use a literal path under the OS temp dir.');
     }
     const abs = resolvePath(target, dir);
-    if (CREDENTIAL_PATH.test(abs)) return deny('Blocked: command touches a credential or shell config file.');
+    if (isCredentialPath(abs, ctx)) return deny('Blocked: command touches a credential or shell config file.');
     const decision = classifyPath('write', abs, ctx.root);
     if (decision) return deny(`Blocked: git writes ${target} through --output/-o. ${decision.reason}`);
     const inTemp = tmp.some((t) => abs.toLowerCase().startsWith(`${t}/`));
@@ -473,6 +586,7 @@ function evalGit(args: string[], ctx: Ctx): Decision | null {
     if (rewriting && targetsMain) {
       return deny('Force push or delete that can rewrite main/master blocked. Use --force-with-lease on a feature branch.');
     }
+    return ASK('git push needs explicit human approval.');
   }
   return null;
 }
@@ -485,7 +599,7 @@ function evalSimple(seg: Simple, ctx: Ctx, depth: number): Decision | null {
   for (const r of seg.reds) {
     if (r.target.startsWith('&')) continue;
     add(classifyPath(r.op === '>' ? 'write' : 'read', r.target, ctx.root));
-    if (CREDENTIAL_PATH.test(toPosix(r.target))) add(deny('Blocked: command touches a credential or shell config file.'));
+    if (isCredentialPath(r.target, ctx)) add(deny('Blocked: command touches a credential or shell config file.'));
   }
   if (envDump) add(deny(ENV_DUMP));
   if (!cmd) return pick(found);
@@ -496,8 +610,23 @@ function evalSimple(seg: Simple, ctx: Ctx, depth: number): Decision | null {
   if (runner) {
     const rest = args.slice(cmd === 'bunx' ? 0 : cmd === 'bun' ? bunAt + 1 : 1);
     let k = 0;
-    while (k < rest.length && (rest[k] ?? '').startsWith('-')) k += rest[k] === '-p' || rest[k] === '--package' ? 2 : 1;
+    const specs: string[] = [];
+    while (k < rest.length && (rest[k] ?? '').startsWith('-')) {
+      const inline = /^(-p|--package)=(.*)$/.exec(rest[k] ?? '');
+      if (inline) specs.push(inline[2] ?? '');
+      if (rest[k] === '-p' || rest[k] === '--package') specs.push(rest[k + 1] ?? '');
+      k += rest[k] === '-p' || rest[k] === '--package' ? 2 : 1;
+    }
+    specs.push(rest[k] ?? '');
+    const tag = specs.map((s) => /^(@[^/]+\/)?[^@]+@(.*)$/.exec(s)?.[2]).find((t) => t !== undefined && !/^[\d^~=<>]/.test(t));
+    if (tag !== undefined) {
+      add(deny('Blocked: an unpinned runner (`@latest`, `@next`...) fetches whatever is newest. Use a pinned CLI: `bunx --no-install <cli>` or an exact version.'));
+    }
+    if (specs.some((sp) => /^(github:|gitlab:|bitbucket:|git(\+|:)|https?:|file:)/i.test(sp))) {
+      add(deny('Blocked: running a package straight from a git repo or URL executes unreviewed code. Add the dependency with `bunx expo install` or use a registry package at an exact version.'));
+    }
     const target = rest[k] === undefined ? '' : cmdName(rest[k] ?? '');
+    if (/^create-/.test(target)) add(deny('Blocked: scaffolders fetch an unpinned latest and write a new project. Do not run them inside this template.'));
     if (['npm', 'npx', 'pnpm', 'yarn'].includes(target)) add(PM_DENY);
     else if (target) add(evalSimple({ words: rest.slice(k), reds: [], bodies: seg.bodies }, ctx, depth));
   }
@@ -506,8 +635,8 @@ function evalSimple(seg: Simple, ctx: Ctx, depth: number): Decision | null {
   if (SHELLS.has(cmd)) {
     const at = args.findIndex((a) => /^-[a-z]*c[a-z]*$/.test(a) || /^-command$/i.test(a));
     if (at !== -1) add(evaluateBash(args.slice(at + 1).join(' '), ctx, depth + 1));
-  } else if (cmd === 'eval' || (cmd === 'cmd' && /^\/c$/i.test(args[0] ?? ''))) {
-    add(evaluateBash(args.slice(cmd === 'cmd' ? 1 : 0).join(' '), ctx, depth + 1));
+  } else if (cmd === 'eval' || cmd === 'iex' || cmd === 'invoke-expression' || (cmd === 'cmd' && /^\/c$/i.test(args[0] ?? ''))) {
+    add(evaluateBash(args.slice(cmd === 'cmd' ? 1 : 0).filter((a) => !/^-command$/i.test(a)).join(' '), ctx, depth + 1));
   }
 
   // --- Package manager: bun only; SDK-aware installs go through `expo install`.
@@ -525,6 +654,14 @@ function evalSimple(seg: Simple, ctx: Ctx, depth: number): Decision | null {
       add(deny('Global installs change the machine, not the project. Use `bunx --no-install <cli>` for pinned CLIs.'));
     } else if ((args[0] === 'install' || args[0] === 'i') && args.slice(1).some((a) => !a.startsWith('-'))) {
       add(PM_DENY); // `bun install <pkg>` adds a package like `bun add`
+    } else if (['update', 'up'].includes(args[bunAt] ?? '')) {
+      add(deny('`bun update` can move Expo-pinned packages off the SDK-compatible set. Use `bunx expo install --fix`.'));
+    } else if (['remove', 'rm', 'link', 'create', 'c'].includes(args[bunAt] ?? '')) {
+      add(deny(`\`bun ${args[bunAt]}\` changes dependencies or fetches unpinned code. Edit package.json (it asks) and run \`bun install\`, or ask the human.`));
+    }
+    const bunScript = args.findIndex((a, k) => !a.startsWith('-') && !BUN_VALUE_FLAGS.has(args[k - 1] ?? '') && a !== 'run');
+    if (args.slice(0, bunScript === -1 ? args.length : bunScript).some((a) => /^(--preload|--require|--import|-r)(=|$)/.test(a))) {
+      add(deny('Blocked: bun --preload/--require/--import runs an arbitrary file before the script.'));
     }
   }
 
@@ -551,9 +688,8 @@ function evalSimple(seg: Simple, ctx: Ctx, depth: number): Decision | null {
     (cmd === 'gh' && args[0] === 'secret') ||
     seg.words.some(
       (w) =>
-        /^env:$/i.test(w) ||
-        /^\$env:$/i.test(w) ||
-        (/^\$env:/i.test(w) && secretWord(w)) ||
+        /^\$?env:[\\/]?([^\\/]*[*?[])?$/i.test(w) ||
+        (/\$\{?env:|^env:/i.test(w) && secretWord(w.slice(w.search(/env:/i)))) ||
         /GetEnvironmentVariables/i.test(w) ||
         /\/proc\/[^/]+\/environ/.test(w),
     )
@@ -571,6 +707,40 @@ function evalSimple(seg: Simple, ctx: Ctx, depth: number): Decision | null {
   const e2eRest = cmd === 'e2e' ? args : inv && (inv.script === 'e2e' || inv.script.startsWith('test:e2e')) ? inv.rest : null;
   if (e2eRest?.some((a) => a === '--config' || a.startsWith('--config='))) {
     add(deny("Blocked: e2e with --config runs an arbitrary config file. Use the repo's e2e.config.ts (bun run test:e2e:*)."));
+  }
+  const e2eCli = cmd === 'e2e' ? args : inv?.script === 'e2e' ? inv.rest : [];
+  const e2eSub = firstPositional(e2eCli);
+  if (e2eSub === 'feedback') add(deny('Blocked: e2e feedback uploads session data to a third party.'));
+  else if (e2eSub === 'login' || e2eSub === 'logout') {
+    add(ASK(`e2e ${e2eSub} is interactive and changes the stored subscription login (~/.config/e2e/oauth.json). Ask the human to run it in their own terminal.`));
+  }
+  // Jest, eslint and `bun test` load code named by these flags (`--config x.js`, `--globalSetup`, `--rulesdir`...).
+  const runnerScript = inv && !inv.script.startsWith('test:e2e') && (/^(test|lint)(:|$)/.test(inv.script) || inv.script === 'jest' || inv.script === 'eslint');
+  const loader = cmd === 'jest' || cmd === 'eslint' ? args : cmd === 'expo' && args[0] === 'lint' ? args.slice(1) : runnerScript ? inv.rest : null;
+  const linting = cmd === 'eslint' || cmd === 'expo' || (inv !== null && /^(lint|eslint)(:|$)/.test(inv.script));
+  const loads = loader?.find((a, i) => {
+    if (!a.startsWith('-')) return false;
+    if (/^-c[^=]/.test(a)) return true; // `-cx.js`
+    const name = a.replace(/^-+/, '').split(/[=.]/)[0]?.replace(/-/g, '').toLowerCase() ?? '';
+    if (linting && (name === 'f' || name === 'format')) {
+      // `-f json` is a built-in formatter; a path loads a file.
+      const value = a.includes('=') ? a.slice(a.indexOf('=') + 1) : /^-f./.test(a) && !a.startsWith('--') ? a.slice(2) : (loader[i + 1] ?? '');
+      return /[\\/.]/.test(value);
+    }
+    return CODE_LOADING_FLAGS.has(name);
+  });
+  if (loads) add(deny(`Blocked: ${loads.split('=')[0]} makes the test or lint runner load a file of its own. Use the repo's jest.config.js and eslint.config.js.`));
+  if (seg.words.some((w) => /^(NODE_OPTIONS|BUN_OPTIONS)=.*(--(require|import|preload|loader|experimental-loader)|(^|\s)-r\b)/.test(w))) {
+    add(deny('Blocked: NODE_OPTIONS and BUN_OPTIONS can preload an arbitrary file into every node and bun process.'));
+  }
+
+  if (cmd === 'gh') {
+    const tokenRead =
+      (args[0] === 'auth' && args[1] === 'status' && args.some((a) => a === '--show-token' || /^-[a-zA-Z]*t[a-zA-Z]*$/.test(a))) ||
+      (args[0] === 'auth' && args[1] === 'login' && args.includes('--with-token')) ||
+      (args[0] === 'config' && args[1] === 'get' && args.includes('oauth_token'));
+    if (tokenRead) add(deny('Blocked: this prints or replaces the GitHub token. Ask the human to run it in their own terminal if needed.'));
+    if (args[0] === 'pr' && args[1] === 'merge') add(ASK('gh pr merge needs explicit human approval.'));
   }
 
   // --- Code passed on the command line (bun -e, node -e, python -c) or on stdin (heredoc): scan it for .env paths.
@@ -603,10 +773,11 @@ function evalSimple(seg: Simple, ctx: Ctx, depth: number): Decision | null {
       fileArgs = fileArgs.slice(g + 1);
     }
   }
+  add(evalSweep(fileCmd, fileArgs, fileCmd !== cmd, ctx));
   const writes = WRITERS.has(cmd) || (cmd === 'sed' && args.some((a) => /^-[a-z]*i/.test(a) || a.startsWith('--in-place')));
   for (const w of pathCandidates(fileCmd, fileArgs)) {
     add(classifyPath(writes ? 'write' : 'read', w, ctx.root));
-    if (CREDENTIAL_PATH.test(toPosix(w))) add(deny('Blocked: command touches a credential or shell config file.'));
+    if (isCredentialPath(w, ctx)) add(deny('Blocked: command touches a credential or shell config file.'));
   }
 
   return pick(found);
@@ -620,6 +791,10 @@ export function evaluateBash(command: string, ctx: Ctx = defaultCtx(), depth = 0
   if (depth > 4 || !command.trim()) return null;
   const { outer, inner } = extractSubstitutions(command);
   const found: Decision[] = [];
+  // `[Environment]::GetEnvironmentVariable('EXPO_TOKEN')`: the parentheses would split it into separate commands.
+  for (const m of command.matchAll(/GetEnvironmentVariable\s*\(\s*(['"]?)([^'")]*)/gi)) {
+    if (SECRET_NAME.test(m[2] ?? '') || /[$%]/.test(m[2] ?? '')) found.push(deny(ENV_DUMP));
+  }
   let cwd = ctx.cwd;
   // A second pass drops every backslash like POSIX shells do (`.en\v` is `.env`); the first keeps Windows paths intact.
   for (const segs of outer.includes('\\') ? [tokenize(outer), tokenize(outer, true)] : [tokenize(outer)]) {
@@ -629,7 +804,11 @@ export function evaluateBash(command: string, ctx: Ctx = defaultCtx(), depth = 0
       if (d) found.push(d);
       const { cmd, args } = peel(seg.words);
       const dest = args.find((a) => !a.startsWith('-'));
-      if (['cd', 'pushd', 'set-location', 'sl'].includes(cmd) && dest && !/^[~$-]/.test(dest)) cwd = nativeResolve(cwd, dest);
+      if (cmd === 'cd' && dest === undefined) cwd = ctx.home;
+      else if (['cd', 'pushd', 'set-location', 'sl'].includes(cmd) && dest) {
+        const target = dest.replace(/^(~|\$\{?home\}?)(?=[\\/]|$)/i, ctx.home);
+        if (!/^[$%-]/.test(target)) cwd = nativeResolve(cwd, target);
+      }
     }
   }
   for (const body of inner) {

@@ -1,9 +1,12 @@
 import { expect, test } from './support/open-app';
 
-// Agent steps call a model, configured in e2e.config.ts when ANTHROPIC_API_KEY is set. Without the key
-// these tests are skipped and the suite stays green. They cost money per run: keep the deterministic
-// tests as the required check and run these on demand.
-const skip = process.env.ANTHROPIC_API_KEY ? false : 'set ANTHROPIC_API_KEY to run agent tests';
+import { selectModelProvider } from './support/model';
+
+// Agent steps call the model from e2e/support/model.ts. They are opt-in (E2E_AGENT=1 or E2E_MODEL_PROVIDER, plus an
+// API key or a subscription login); otherwise these tests are skipped and the suite stays green. They use your
+// plan's limits or cost per run: keep the deterministic tests as the required check and run these on demand.
+const selected = selectModelProvider();
+const skip = selected.provider ? false : selected.reason;
 
 // Android only until it has run on iOS with a model: after sign-in, iOS shows a "Save Password?" system sheet
 // over the app (the signIn fixture in support/open-app.ts dismisses it; an agent run has not been checked).

@@ -21,11 +21,11 @@ it('announces each toast for VoiceOver with the default iOS-only target', () => 
 afterEach(() => jest.clearAllMocks());
 
 describe('toast', () => {
-  it('maps an action to a sticky toast with onClick', () => {
+  it('maps an action to a finite-duration toast with onClick', () => {
     const onPress = jest.fn();
     toast.info('Update ready', { action: { label: 'Restart', onPress } });
     const opts = (sonner.info as jest.Mock).mock.calls[0][1];
-    expect(opts).toMatchObject({ action: { label: 'Restart' }, duration: Infinity });
+    expect(opts).toMatchObject({ action: { label: 'Restart' }, duration: 15_000 });
     opts.action.onClick();
     expect(onPress).toHaveBeenCalledTimes(1);
   });

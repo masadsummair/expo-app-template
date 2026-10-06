@@ -21,21 +21,42 @@ type RequestOptions<S extends z.ZodType> = {
   signal?: AbortSignal;
 };
 
+const API_PREFIX = new URL(env.API_URL).pathname.replace(/\/$/, '');
+
+const safeDecode = (segment: string) => {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+};
+
 /**
- * Resolves `path` against the API and refuses anything that would leave its origin, so the
- * bearer token can never be sent to another host (e.g. a `//evil.com` or `@evil.com` path
- * built from a deep-link param).
+ * Resolves `path` against the API and refuses anything that would leave its origin or its path
+ * prefix, so the bearer token can never be sent to another host (e.g. a `//evil.com` or
+ * `@evil.com` path) or endpoint (a `..` segment) built from a deep-link param. Escape dynamic
+ * segments with `encodeURIComponent`, which keeps a `/` inside one segment but leaves a bare `..`.
  */
 function apiUrl(path: string): string {
   if (!path.startsWith('/') || path.startsWith('//')) {
     throw new Error(`API path must start with a single "/": ${path}`);
   }
+  // URL drops tabs and newlines before resolving, so `.\t.` is a `..` segment too.
+  const segments = path.replace(/[\t\n\r]/g, '').replace(/[?#].*/s, '').split(/[/\\]/);
+  if (segments.some((s) => ['.', '..'].includes(safeDecode(s)))) {
+    throw new Error(`API path must not contain "." or ".." segments: ${path}`);
+  }
   const url = new URL(env.API_URL.replace(/\/$/, '') + path);
-  if (url.origin !== API_ORIGIN) throw new Error(`API path escapes the API origin: ${path}`);
+  if (url.origin !== API_ORIGIN || !url.pathname.startsWith(`${API_PREFIX}/`)) {
+    throw new Error(`API path escapes the API origin or prefix: ${path}`);
+  }
   return url.toString();
 }
 
-/** Typed request: validates the response body with `schema`; never throws for HTTP/network errors. */
+/**
+ * Typed request: validates the response body with `schema`. HTTP and network failures come back as an
+ * ApiProblem; only a programmer error throws (a bad `path`, or a `body` JSON.stringify cannot serialise).
+ */
 export async function request<S extends z.ZodType>({
   path,
   schema,
@@ -44,6 +65,7 @@ export async function request<S extends z.ZodType>({
   signal,
 }: RequestOptions<S>): Promise<ApiResult<z.infer<S>>> {
   const url = apiUrl(path);
+  const payload = body === undefined ? undefined : JSON.stringify(body);
   const token = useAuthStore.getState().token;
   let response: Response;
   try {
@@ -54,7 +76,7 @@ export async function request<S extends z.ZodType>({
         ...(body !== undefined && { 'Content-Type': 'application/json' }),
         ...(token && { Authorization: `Bearer ${token}` }),
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: payload,
       signal: signal
         ? AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT_MS)])
         : AbortSignal.timeout(TIMEOUT_MS),

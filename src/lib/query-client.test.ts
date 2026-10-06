@@ -21,6 +21,12 @@ describe('shouldRetry', () => {
   });
 });
 
+describe('defaults', () => {
+  it('runs mutations offline so they fail fast instead of queueing', () => {
+    expect(queryClient.getDefaultOptions().mutations?.networkMode).toBe('always');
+  });
+});
+
 describe('session handling', () => {
   beforeEach(async () => {
     await useAuthStore.getState().signIn('token');

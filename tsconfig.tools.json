@@ -3,6 +3,6 @@
   "compilerOptions": {
     "types": ["bun"]
   },
-  "include": ["scripts/**/*.ts", "evals/**/*.ts", ".claude/hooks/**/*.ts"],
+  "include": ["scripts/**/*.ts", "evals/**/*.ts", ".claude/hooks/**/*.ts", "e2e/**/*.ts", "e2e.config.ts"],
   "exclude": ["node_modules"]
 }

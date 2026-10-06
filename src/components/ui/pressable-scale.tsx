@@ -5,7 +5,9 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import * as haptics from '@/lib/haptics';
 import { PRESSED_SCALE, spring } from '@/lib/motion';
 
-export type PressableScaleProps = Omit<PressableProps, 'children'> & {
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+export type PressableScaleProps = Omit<PressableProps, 'children' | 'style'> & {
   children: ReactNode;
   /** Required: e2e tests and agents select elements by testID. */
   testID: string;
@@ -17,7 +19,8 @@ export type PressableScaleProps = Omit<PressableProps, 'children'> & {
 /**
  * Opt-in press feedback for cards and rows: a subtle UI-thread spring scale, identical on iOS and
  * Android, and skipped automatically when the system "reduce motion" setting is on. Buttons keep
- * the simpler opacity press (see Button).
+ * the simpler opacity press (see Button). `className` lands on the pressable itself, so padding
+ * and min-h are tappable and the scale matches the touch region.
  */
 export function PressableScale({
   children,
@@ -35,25 +38,25 @@ export function PressableScale({
   });
 
   return (
-    <Animated.View style={style} className={className}>
-      <Pressable
-        accessibilityRole="button"
-        onPressIn={(event) => {
-          scale.set(withSpring(PRESSED_SCALE, spring.snappy));
-          onPressIn?.(event);
-        }}
-        onPressOut={(event) => {
-          scale.set(withSpring(1, spring.snappy));
-          onPressOut?.(event);
-        }}
-        onPress={(event) => {
-          if (haptic) haptics.tap();
-          onPress?.(event);
-        }}
-        {...props}
-      >
-        {children}
-      </Pressable>
-    </Animated.View>
+    <AnimatedPressable
+      accessibilityRole="button"
+      className={className}
+      style={style}
+      onPressIn={(event) => {
+        scale.set(withSpring(PRESSED_SCALE, spring.snappy));
+        onPressIn?.(event);
+      }}
+      onPressOut={(event) => {
+        scale.set(withSpring(1, spring.snappy));
+        onPressOut?.(event);
+      }}
+      onPress={(event) => {
+        if (haptic) haptics.tap();
+        onPress?.(event);
+      }}
+      {...props}
+    >
+      {children}
+    </AnimatedPressable>
   );
 }

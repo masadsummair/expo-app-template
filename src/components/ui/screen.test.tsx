@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
-import { Screen } from './screen';
+import { BottomBannerHeightContext, Screen } from './screen';
 
 jest.mock('react-native-keyboard-controller', () =>
   jest.requireActual('react-native-keyboard-controller/jest'),
@@ -34,5 +34,16 @@ describe('Screen', () => {
     );
     expect(screen.getByText('Save')).toBeOnTheScreen();
     expect(screen.getByTestId('s')).toHaveStyle({ paddingTop: 24, paddingBottom: 0 });
+  });
+
+  it('drops its own bottom inset while a banner below it owns the inset', async () => {
+    await render(
+      <BottomBannerHeightContext value={60}>
+        <Screen testID="s" edges={['bottom']}>
+          <Text>body</Text>
+        </Screen>
+      </BottomBannerHeightContext>,
+    );
+    expect(screen.getByTestId('s')).toHaveStyle({ paddingBottom: 0 });
   });
 });

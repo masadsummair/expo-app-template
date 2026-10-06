@@ -31,14 +31,22 @@ export function relativeToRoot(p: string, root: string): string | null {
   return abs.toLowerCase().startsWith(`${r.toLowerCase()}/`) ? abs.slice(r.length + 1) : null;
 }
 
+/** Last path segment, still holding any `HEAD:`, `C:` or NTFS `:stream` parts (`isEnvName` checks each). */
 export function baseName(p: string): string {
-  const tail = p.split(/[\\/]/).pop() ?? '';
-  return tail.slice(tail.lastIndexOf(':') + 1); // `HEAD:.env` (git show) and `C:.env`
+  return p.split(/[\\/]/).pop() ?? '';
 }
 
-/** `.env`, `.env.local`, `.ENV`, globs like `.env*` or `.e*`; `.env.example` and `.env.d.ts` are fine. */
+/**
+ * `.env`, `.env.local`, `.ENV`, globs like `.env*` or `.e*`; `.env.example` and `.env.d.ts` are fine.
+ * Win32 drops trailing dots and spaces, `:stream` and `::$DATA` open the same file, and `ENV~1` is its 8.3 alias.
+ */
 export function isEnvName(name: string): boolean {
-  const b = name.toLowerCase();
+  return name.split(':').some(isEnvPart);
+}
+
+function isEnvPart(part: string): boolean {
+  const b = part.toLowerCase().replace(/[. ]+$/, '');
+  if (/^env~\d+(\.[a-z0-9]{0,3})?$/.test(b)) return true;
   const glob = b.search(/[*?[]/);
   if (glob !== -1) {
     const prefix = b.slice(0, glob);
@@ -46,6 +54,33 @@ export function isEnvName(name: string): boolean {
   }
   return /^\.env(\.[a-z0-9_-]+)*$/.test(b) && b !== '.env.example' && !b.endsWith('.d.ts');
 }
+
+/** Glob to RegExp (`*`, `?`, `[a-z]`, `{a,b}`); a glob it cannot parse matches everything, the safe side. */
+export function globMatches(glob: string, name: string): boolean {
+  let re = '';
+  let braces = 0;
+  for (const c of glob) {
+    if (c === '*') re += '.*';
+    else if (c === '?') re += '.';
+    else if (c === '{') {
+      re += '(?:';
+      braces++;
+    } else if (c === '}' && braces) {
+      re += ')';
+      braces--;
+    } else if (c === ',' && braces) re += '|';
+    else if (c === '[' || c === ']') re += c;
+    else re += c.replace(/[.+^$()|\\]/, '\\$&');
+  }
+  try {
+    return new RegExp(`^${re}${')'.repeat(braces)}$`, 'i').test(name);
+  } catch {
+    return true;
+  }
+}
+
+// What a sweep has to skip: every one of these must be excluded, `--exclude=.env` alone still prints `.env.local`.
+export const ENV_FILES = ['.env', '.env.local', '.env.production', '.env.development'];
 
 const ENV_MESSAGE = (rel: string) =>
   `Access to ${rel} blocked, it may contain secrets. Use .env.example for variable names.`;
@@ -56,10 +91,15 @@ const EXECUTED_BY_AUTO_APPROVED =
 // Tool configs and test scaffolding that other agents' tools, installs or the test runner load and execute.
 const TOOL_CONFIG = /^(\.(vscode|codex|gemini|cursor)|e2e)(\/|$)|^test\/setup\.ts$|(^|\/)(bunfig\.toml|\.npmrc|tsconfig[^/]*\.json)$/i;
 
+// Slash commands carry allowed-tools and shell injection; the ignore files are the secret-hiding control for Cursor and Gemini.
+const AGENT_CONTROL =
+  /^(\.claude|\.agents|\.husky)(\/|$)|^(claude\.md|gemini\.md|\.cursorignore|\.geminiignore|\.fingerprintignore|\.?lefthook(-local)?\.ya?ml)$/i;
+
 /** Decision for touching `path`. `read` only checks secrets; `write` also checks protected files. */
 export function classifyPath(access: 'read' | 'write', path: string, root: string): Decision | null {
-  const rel = relativeToRoot(path, root);
-  const label = rel ?? path;
+  const raw = relativeToRoot(path, root);
+  const label = raw ?? path;
+  const rel = raw === null ? null : raw.split('/').map((seg) => seg.split(':')[0]?.replace(/[. ]+$/, '') ?? '').join('/');
   if (isEnvName(baseName(path))) return { decision: 'deny', reason: ENV_MESSAGE(label) };
   if (access === 'read' || rel === null) return null;
 
@@ -69,6 +109,9 @@ export function classifyPath(access: 'read' | 'write', path: string, root: strin
       decision: 'deny',
       reason: 'ios/ and android/ are generated (CNG) and overwritten by prebuild. Change native behaviour in app.config.ts or a config plugin instead.',
     };
+  }
+  if (rel.split('/').some((seg) => /^[^.]{1,6}~\d+(\.[a-z0-9]{0,3})?$/i.test(seg))) {
+    return { decision: 'ask', reason: `${label} looks like a Windows 8.3 short name, which can alias a protected file. Use the long name.` };
   }
   // The agent must not silently rewrite its own guardrails or permissions.
   if (/^\.claude\/(hooks(\/|$)|settings)/i.test(rel) || rel.toLowerCase() === '.mcp.json' || /^\.cursor\//i.test(rel)) {
@@ -83,6 +126,9 @@ export function classifyPath(access: 'read' | 'write', path: string, root: strin
   }
   if (TOOL_CONFIG.test(rel)) {
     return { decision: 'ask', reason: `${rel} configures tools, installs or tests that run with auto-approved commands or other agents. Confirm this edit is intended.` };
+  }
+  if (AGENT_CONTROL.test(rel)) {
+    return { decision: 'ask', reason: `${rel} steers other agents or hides secrets from them (commands, rules, instructions, ignore files, git hooks). Confirm this edit is intended.` };
   }
   return null;
 }

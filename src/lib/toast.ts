@@ -5,6 +5,9 @@ import { errorMessage } from '@/lib/error-message';
 
 export type ToastAction = { label: string; onPress: () => void };
 
+/** How long a toast with an action stays; the Toaster close button dismisses it sooner. */
+const ACTION_TOAST_MS = 15_000;
+
 type ToastOptions = { description?: string; action?: ToastAction };
 
 /*
@@ -14,8 +17,10 @@ type ToastOptions = { description?: string; action?: ToastAction };
 function options({ description, action }: ToastOptions = {}) {
   return {
     description,
-    // Toasts with an action stay until the user acts or dismisses them.
-    ...(action && { action: { label: action.label, onClick: action.onPress }, duration: Infinity }),
+    ...(action && {
+      action: { label: action.label, onClick: action.onPress },
+      duration: ACTION_TOAST_MS,
+    }),
   };
 }
 

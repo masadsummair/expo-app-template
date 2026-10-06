@@ -103,7 +103,12 @@ function RootLayout() {
                 <Stack.Screen name="sign-in" />
               </Stack.Protected>
             </Stack>
-            <Toaster position="top-center" theme={colorScheme === 'dark' ? 'dark' : 'light'} />
+            <Toaster
+              position="top-center"
+              theme={colorScheme === 'dark' ? 'dark' : 'light'}
+              closeButton
+              maxFontSizeMultiplier={1.5}
+            />
             <StatusBar style="auto" />
           </ThemeProvider>
         </KeyboardProvider>

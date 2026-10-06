@@ -26,6 +26,12 @@ if (!isAppEnv(APP_ENV)) {
 }
 const variant = variants[APP_ENV];
 
+// The JS bundle reads EXPO_PUBLIC_APP_ENV (src/config/env.ts); a mismatch ships the wrong behaviour.
+const PUBLIC_APP_ENV = process.env.EXPO_PUBLIC_APP_ENV;
+if (PUBLIC_APP_ENV !== undefined && PUBLIC_APP_ENV !== APP_ENV) {
+  throw new Error(`EXPO_PUBLIC_APP_ENV ("${PUBLIC_APP_ENV}") must match APP_ENV ("${APP_ENV}").`);
+}
+
 // Fail the build, not the app launch: src/config/env.ts throws at startup without this.
 if (APP_ENV !== 'development' && !process.env.EXPO_PUBLIC_API_URL) {
   throw new Error(
@@ -110,6 +116,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-secure-store',
     '@sentry/react-native',
+    [
+      'expo-build-properties',
+      {
+        // R8 minification and resource shrinking for Android release builds (dev builds are unaffected).
+        // Verified by the release-mode e2e run; re-run it (E2E_BUILD=release) after adding a native module.
+        android: { enableMinifyInReleaseBuilds: true, enableShrinkResourcesInReleaseBuilds: true },
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

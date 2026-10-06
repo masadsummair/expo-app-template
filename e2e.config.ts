@@ -2,6 +2,7 @@ import { mobile } from '@e2e-dev/mobile';
 import type { E2EConfig } from 'e2e';
 
 import { APP_ID, isReleaseBuild } from './e2e/support/build-mode';
+import { createModel, selectModelProvider } from './e2e/support/model';
 
 // e2e (tester-army/e2e) sends anonymous usage telemetry unless told not to. The package scripts, the
 // CI workflow and the e2e entry in .mcp.json set E2E_TELEMETRY_DISABLED=1. If you run `bunx e2e` by
@@ -43,16 +44,18 @@ const iosDevLaunchArguments = [
 
 const mode = isReleaseBuild ? 'release' : 'dev';
 
-// Agent steps (agent.act / assert / extract) need a model. The default suite does not, so the agent
-// block only exists when ANTHROPIC_API_KEY is set. A Claude *subscription* cannot be used here; an API
-// key can (`ai` and `@ai-sdk/anthropic` are devDependencies). The import is dynamic so the
-// config still loads, and the deterministic tests still run, with no key.
-const agents: { agents?: E2EConfig['agents'] } = process.env.ANTHROPIC_API_KEY
+// Agent steps (agent.act / assert / extract) need a model; the deterministic suite does not. The model comes
+// from an API key or a subscription login (ChatGPT, GitHub Copilot, OpenCode Console, SuperGrok): see
+// e2e/support/model.ts for the order. Opt-in: without E2E_AGENT=1 or E2E_MODEL_PROVIDER, the agent block is
+// absent and agent tests skip, so an ambient key never spends quota.
+const selected = selectModelProvider();
+const agents: { agents?: E2EConfig['agents'] } = selected.provider
   ? {
       agents: {
         default: {
-          model: (await import('@ai-sdk/anthropic')).anthropic(process.env.E2E_MODEL ?? 'claude-sonnet-5-5'),
+          model: await createModel(selected.provider),
           system: 'You are a QA agent for a mobile app. Verify every outcome on screen before you finish.',
+          // Describes the placeholder Sign in and Home screens; update it when you replace them (see README step 6).
           context: 'Screens: Sign in (email, password, Sign in button), then Home (Sign out button).',
           maxSteps: 12,
           maxModelCalls: 12,

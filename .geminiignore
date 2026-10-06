@@ -7,5 +7,7 @@
 *.p12
 *.key
 *.jks
+*.keystore
+credentials.json
 *.mobileprovision
 *.pem

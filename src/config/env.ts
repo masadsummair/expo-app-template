@@ -9,7 +9,9 @@ import { z } from 'zod';
  */
 const schema = z
   .object({
-    APP_ENV: z.enum(['development', 'preview', 'production']).default('development'),
+    APP_ENV: z
+      .enum(['development', 'preview', 'production'])
+      .default(__DEV__ ? 'development' : 'production'),
     API_URL: z.url(),
     SENTRY_DSN: z.string().optional(),
   })
