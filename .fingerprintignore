@@ -1,0 +1,4 @@
+# A local Android build (React Native's Gradle plugin) rewrites library manifests in node_modules in place,
+# stripping the `package` attribute. iOS autolinking hashes some libraries as whole directories, so without
+# this the local fingerprint differs from EAS (clean install) and the "Configure expo-updates" phase fails.
+node_modules/**/android/src/main/AndroidManifest.xml

@@ -14,6 +14,11 @@ type RequestOptions<S extends z.ZodType> = {
   schema: S;
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
+  /**
+   * Cancels the request. Pass TanStack Query's `signal` (`queryFn: ({ signal }) => requestOrThrow({ ..., signal })`)
+   * so leaving a screen or a newer fetch aborts the old one. The 15s timeout still applies.
+   */
+  signal?: AbortSignal;
 };
 
 /**
@@ -36,6 +41,7 @@ export async function request<S extends z.ZodType>({
   schema,
   method = 'GET',
   body,
+  signal,
 }: RequestOptions<S>): Promise<ApiResult<z.infer<S>>> {
   const url = apiUrl(path);
   const token = useAuthStore.getState().token;
@@ -49,7 +55,9 @@ export async function request<S extends z.ZodType>({
         ...(token && { Authorization: `Bearer ${token}` }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT_MS)])
+        : AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (error) {
     return problemFromError(error);

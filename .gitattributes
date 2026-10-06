@@ -1,0 +1,14 @@
+# Normalise line endings so a Windows checkout (core.autocrlf=true) cannot add \r to scripts and hooks.
+* text=auto eol=lf
+*.sh text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+bun.lock text eol=lf
+*.png binary
+*.jpg binary
+*.ttf binary
+*.otf binary

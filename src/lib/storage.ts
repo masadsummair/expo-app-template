@@ -1,4 +1,5 @@
 import { createMMKV } from 'react-native-mmkv';
+import type { StateStorage } from 'zustand/middleware';
 
 /*
  * Fast synchronous key-value storage for NON-sensitive data (preferences, cache, flags).
@@ -19,3 +20,12 @@ export function loadJSON<T>(key: string): T | null {
 export function saveJSON(key: string, value: unknown): void {
   storage.set(key, JSON.stringify(value));
 }
+
+/** Synchronous Zustand `persist` storage backed by MMKV (see the add-store skill). Non-secrets only. */
+export const zustandStorage: StateStorage = {
+  getItem: (name) => storage.getString(name) ?? null,
+  setItem: (name, value) => storage.set(name, value),
+  removeItem: (name) => {
+    storage.remove(name);
+  },
+};

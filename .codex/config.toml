@@ -1,0 +1,12 @@
+# Same servers as .mcp.json. Codex loads this file only for trusted projects.
+# Expo MCP needs a one-time login: codex mcp login expo
+
+[mcp_servers.e2e]
+command = "bunx"
+args = ["--no-install", "e2e", "mcp"]
+
+[mcp_servers.e2e.env]
+E2E_TELEMETRY_DISABLED = "1"
+
+[mcp_servers.expo]
+url = "https://mcp.expo.dev/mcp"

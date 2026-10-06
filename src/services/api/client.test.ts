@@ -73,6 +73,30 @@ describe('request', () => {
   });
 });
 
+describe('request cancellation', () => {
+  it('still reports a timeout when a caller signal is passed', async () => {
+    globalThis.fetch = jest.fn(async () => {
+      throw new DOMException('The operation timed out.', 'TimeoutError');
+    }) as unknown as typeof fetch;
+    const result = await request({ path: '/me', schema: User, signal: new AbortController().signal });
+    expect(result.kind).toBe('timeout');
+  });
+
+  it('passes a caller signal to fetch, combined with the timeout', async () => {
+    let received: AbortSignal | undefined;
+    globalThis.fetch = jest.fn(async (_url: string, init?: RequestInit) => {
+      received = init?.signal ?? undefined;
+      return jsonResponse(200, { id: '1', name: 'Ada' }) as Response;
+    }) as unknown as typeof fetch;
+    const controller = new AbortController();
+
+    await request({ path: '/me', schema: User, signal: controller.signal });
+    expect(received?.aborted).toBe(false);
+    controller.abort();
+    expect(received?.aborted).toBe(true);
+  });
+});
+
 describe('request origin guard', () => {
   it.each(['//evil.com/steal', 'evil.com/x', '@evil.com/x', 'https://evil.com/x'])(
     'refuses %s so the bearer token never leaves the API origin',
