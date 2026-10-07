@@ -1,7 +1,7 @@
 # Expo App Template (agent-ready)
 
 My personal starting point for English-only mobile MVPs on iOS and Android. AI coding agents (Claude Code first, plus
-Codex, Cursor and Gemini CLI) build features here with project rules, skills, subagents and guard hooks. Phone-first,
+Codex) build features here with project rules, skills, subagents and guard hooks. Phone-first,
 portrait.
 
 - **Stack:** Expo SDK 57 · React Native 0.86 · React 19.2 (React Compiler) · TypeScript · Expo Router · Uniwind
@@ -37,7 +37,7 @@ up Sentry (step 7).
    approval, builds it with tests, reviews it and checks it on a device. Other tools: read `AGENTS.md`, then follow
    `.claude/skills/new-feature/SKILL.md`.
 2. **Commit.** The pre-commit hook runs `bun run verify` (typecheck, lint, unit tests and the repo checks) and blocks
-   the commit if anything fails. There's no GitHub CI/CD; `examples/github-actions/` has optional workflows.
+   the commit if anything fails. The template ships no CI; add your own if you want it.
 3. **Ship.** `/ship` opens the pull request, with approval stops before the commit and the push.
 
 ## Commands

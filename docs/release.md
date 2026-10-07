@@ -20,5 +20,3 @@ pre-approved and always prompt. Android release builds are minified with R8: re-
 - **Vendored skills:** refresh quarterly; the steps are in `.claude/skills/SOURCES.md`.
 - **Docs drift:** `bun run docs:check` (also in the pre-commit hook); the `docs-keeper` agent fixes it.
 - **Existing apps:** apps created from this template don't get later template changes automatically; port them by hand.
-- **CODEOWNERS** (`.github/CODEOWNERS`) is fully commented out: replace the placeholder owner, uncomment it and enable
-  "Require review from Code Owners" in branch protection.

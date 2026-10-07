@@ -23,9 +23,9 @@ of `verify`). If `bun` itself is missing, no hook can run.
   `--profile`). It parses pipes, `$()`, `bash -c` and `eval`, and checks shell write targets.
 - `guard-files` denies reads and edits of `.env*` (and a Grep `glob` that matches it), edits of `ios/` and `android/`, and secret-looking `EXPO_PUBLIC_*`
   names. It asks before edits to `package.json`, `bun.lock`, tool and TS configs, `app.config.ts`, `eas.json`,
-  `scripts/`, `evals/`, `e2e/`, `test/setup.ts`, `.github/`, `.vscode/`, `.cursor/`, `.codex/`, `.gemini/`,
-  `bunfig.toml`, `.npmrc`, `.claude/` (everything in it), `.agents/`, `CLAUDE.md`, `GEMINI.md`, `.cursorignore`,
-  `.geminiignore`, `.fingerprintignore`, `.githooks/`, `.husky/`, lefthook config and `.mcp.json`. Path checks ignore case.
+  `scripts/`, `e2e/`, `test/setup.ts`, `.github/`, `.vscode/`, `.codex/`,
+  `bunfig.toml`, `.npmrc`, `.claude/` (everything in it), `.agents/`, `CLAUDE.md`,
+  `.fingerprintignore`, `.githooks/`, `.husky/`, lefthook config and `.mcp.json`. Path checks ignore case.
 - `lint-changed` lints each file after you edit it.
 - `.claude/settings.json` also denies Read of credential files and asks before `git push`, `gh pr merge` and production-affecting EAS commands.
 
@@ -37,8 +37,7 @@ around it: report the command and the message.
 - `e2e` (tester-army/e2e) drives the emulator/simulator with no model key: open a session, observe, tap, type, then
   encode the journey as a test in `e2e/`. Pinned via the devDependency, telemetry off. On Windows it needs WSL2.
 - `expo` is Expo's hosted docs and EAS MCP server (needs an Expo login).
-- Other tools use mirrors: `.cursor/mcp.json`, `.vscode/mcp.json`, `.gemini/settings.json`, `.codex/config.toml`.
-  `docs:check` fails if their server lists drift.
+- Codex uses a mirror, `.codex/config.toml`. `docs:check` fails if its server list drifts.
 
 ## Agents and skills
 
@@ -59,7 +58,6 @@ Subagents (`.claude/agents/`), dispatch when:
 
 Kit checks: `bun run lint:claude` (skill/agent frontmatter, free), `bun run docs:check` (docs match the repo),
 `bun run skills:check` (`.agents/skills` matches `.claude/skills`); all three are part of `verify`.
-`bun run evals:skills` is opt-in and paid (`evals/README.md`); never in the pre-commit hook.
 Production builds, store submits, production OTA publishes and rollbacks always need explicit approval in the session.
 
 ## Git

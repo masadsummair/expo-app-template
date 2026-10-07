@@ -57,4 +57,4 @@
    `eas.json` sets `SENTRY_ALLOW_FAILURE=true`. Remove it once Sentry works, so a failed upload fails the release build.
 8. **First prompt:** open the project in your agent and start with `/new-feature add a profile edit screen` (Claude
    Code). In other tools: "Read AGENTS.md, then read `.claude/skills/new-feature/SKILL.md` and follow it for: add a
-   profile edit screen." `specs/example-profile-edit.md` shows the spec it writes.
+   profile edit screen." The spec it writes follows `specs/_template.md`.

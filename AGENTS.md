@@ -1,7 +1,6 @@
 # AGENTS.md
 
-Single source of truth for every AI coding agent working in this repo (Claude Code, Codex, Cursor, Gemini CLI,
-Windsurf, Zed, Amp, opencode, ...). `CLAUDE.md` and `GEMINI.md` import this file; do not copy its rules anywhere else.
+Single source of truth for every AI coding agent working in this repo (Claude Code and Codex). `CLAUDE.md` imports this file; do not copy its rules anywhere else.
 
 <!-- BEGIN upstream (create-expo-app). Commands rewritten from npx to bunx: this repo is bun-only. -->
 
@@ -73,7 +72,7 @@ Runs in a **development build**, not Expo Go (MMKV, Sentry, keyboard-controller 
 - Node ≥ 22.12 and bun ≥ 1.3.7 (`engines`; `.node-version` pins Node 24). Claude hooks run on bun: no `jq`, no bash.
 - Shell snippets in skills are bash. In PowerShell write `$env:NAME = 'x'` instead of `NAME=x cmd`, and `gradlew.bat`.
 - Verified on macOS (iOS simulator, Android emulator); the checks have also passed on Windows and Linux. There is no
-  GitHub CI/CD (optional workflows live in `examples/github-actions/`): `.githooks/pre-commit` runs `bun run verify`
+  CI/CD (add your own if you want it): `.githooks/pre-commit` runs `bun run verify`
   before every commit (`bun install` enables it). Run
   `bun run doctor` and the e2e suite yourself before a release; never bypass the hook with `--no-verify` unasked.
 
@@ -87,9 +86,8 @@ src/stores/         Zustand stores (auth-store: token in SecureStore; theme-stor
 src/lib/            storage, query-client + query-setup, error-message, toast, haptics, motion, a11y, confirm, cn, ...
 src/hooks/, src/config/ (env.ts: zod-validated EXPO_PUBLIC_*; flags.ts), src/global.css (design tokens, light + dark)
 e2e.config.ts, e2e/ e2e config and tests (tester-army)     specs/  feature specs (AC-n criteria)
-scripts/, evals/    rename, check-*, skills sync, evals      .githooks/  pre-commit (verify)
-examples/github-actions/  optional CI to copy into .github/ (the template runs no CI/CD)
-.claude/            skills, agents, hooks                  .agents/skills/  generated copy for Codex and Gemini
+scripts/            rename, check-*, skills sync             .githooks/  pre-commit (verify)
+.claude/            skills, agents, hooks                  .agents/skills/  generated copy for Codex
 ```
 
 ## Conventions
@@ -235,8 +233,8 @@ Route errors: `export { ErrorFallback as ErrorBoundary } from '@/components/erro
 
 ## Agents and skills
 
-Skills are folders with a `SKILL.md`. Edit them in `.claude/skills/`; Claude Code and Cursor read that folder. Codex and
-Gemini CLI read `.agents/skills/`, a generated copy: run `bun run skills:sync` after editing (`verify` fails on drift).
+Skills are folders with a `SKILL.md`. Edit them in `.claude/skills/`; Claude Code reads that folder. Codex
+reads `.agents/skills/`, a generated copy: run `bun run skills:sync` after editing (`verify` fails on drift).
 
 | Skill | Use for |
 |---|---|
@@ -257,10 +255,9 @@ Review roles live in `.claude/agents/*.md`: `rn-reviewer` (before every commit/P
 
 ## Other agents (no hooks)
 
-Only Claude Code enforces the hard rules with hooks. In Codex, Cursor and Gemini CLI keep the default approval
-mode, do not auto-approve shell commands or MCP tools, and review the diff against the hard rules. `.cursorignore` and
-`.geminiignore` hide secrets from indexing and `@` sharing only; they do not cover Cursor's terminal or MCP tools. Codex
-needs the project trusted and `codex mcp login expo`; Gemini CLI needs the folder trusted for `.gemini/settings.json`.
+Only Claude Code enforces the hard rules with hooks. In Codex keep the default approval
+mode, do not auto-approve shell commands or MCP tools, and review the diff against the hard rules. Codex
+needs the project trusted and `codex mcp login expo`.
 
 ## Git
 

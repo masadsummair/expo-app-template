@@ -7,7 +7,7 @@
  *
  * Checks: `bun run <script>` exists in package.json; backtick-quoted paths exist; the Layout block
  * in AGENTS.md exists on disk; every agent file is documented; every skill named in the docs exists;
- * CLAUDE.md/GEMINI.md import AGENTS.md; stack versions and env vars match the code; the e2e build mode
+ * CLAUDE.md imports AGENTS.md; stack versions and env vars match the code; the e2e build mode
  * (APP_ID, DEV_CLIENT_SCHEME) matches app.config.ts; every MCP config file lists the same servers; .gitattributes exists.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -33,11 +33,11 @@ const MISSING_PATH_OK = new Set([
   "SKILL.md", // generic file name used in prose, not a root file
 ]);
 // Root-level or top-level names that make a backtick token count as a repo path.
-const PATH_ROOTS = ["src", ".claude", ".github", ".githooks", ".eas", "docs", "e2e", "examples", "scripts", "specs", "test", "assets", "evals", "licenses", "ios", "android"];
+const PATH_ROOTS = ["src", ".claude", ".github", ".githooks", ".eas", "docs", "e2e", "scripts", "specs", "test", "assets", "licenses", "ios", "android"];
 const ROOT_FILE = /^[\w.-]+\.(md|json|js|yml|yaml|lock)$|^[\w-]+\.config\.ts$|^\.env(\.example)?$|^LICENSE$/;
 
 const docs = [
-  "README.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md",
+  "README.md", "AGENTS.md", "CLAUDE.md",
   "specs/README.md", "specs/_template.md", "THIRD_PARTY_NOTICES.md",
   ...(existsSync(at("docs")) ? readdirSync(at("docs")).filter((n) => n.endsWith(".md")).map((n) => `docs/${n}`) : []),
 ].filter((f) =>
@@ -96,7 +96,7 @@ for (const f of ownDocFiles()) {
   }
 }
 
-// 2. Paths in backticks, README/AGENTS/CLAUDE/GEMINI only (skills use illustrative paths on purpose).
+// 2. Paths in backticks, README/AGENTS/CLAUDE only (skills use illustrative paths on purpose).
 function looksLikePath(tok: string): boolean {
   if (/[*<>{}$|\s]/.test(tok) || tok.includes("...")) return false;
   const first = tok.split("/")[0] ?? "";
@@ -166,8 +166,8 @@ for (const f of docs) {
   }
 }
 
-// 5. One source of truth: CLAUDE.md and GEMINI.md import AGENTS.md first.
-for (const f of ["CLAUDE.md", "GEMINI.md"]) {
+// 5. One source of truth: CLAUDE.md imports AGENTS.md first.
+for (const f of ["CLAUDE.md"]) {
   if (!(f in text)) continue;
   const first = (text[f] ?? "").split("\n").find((l) => l.trim() !== "");
   if (first?.trim() !== "@AGENTS.md") err(f, "must start with `@AGENTS.md` so AGENTS.md stays the single source of truth");
@@ -252,9 +252,6 @@ for (const f of ["CLAUDE.md", "GEMINI.md"]) {
   const json = (raw: string) => JSON.parse(raw.replace(/^\s*\/\/.*$/gm, "")) as Record<string, Record<string, unknown> | undefined>;
   const configs = [
     names(".mcp.json", (r) => Object.keys(json(r).mcpServers ?? {})),
-    names(".cursor/mcp.json", (r) => Object.keys(json(r).mcpServers ?? {})),
-    names(".vscode/mcp.json", (r) => Object.keys(json(r).servers ?? {})),
-    names(".gemini/settings.json", (r) => Object.keys(json(r).mcpServers ?? {})),
     names(".codex/config.toml", (r) => [
       ...new Set([...r.matchAll(/^\[mcp_servers\.(?:"([^"]+)"|([\w-]+))(?:\.[^\]]*)?\]/gm)].map((m) => m[1] ?? m[2] ?? "")),
     ]),

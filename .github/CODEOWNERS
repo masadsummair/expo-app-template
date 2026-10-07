@@ -1,7 +1,0 @@
-# Replace @your-org/your-team with a real user or team, uncomment, and enable
-# "Require review from Code Owners" in the branch protection rules.
-# Keep the agent rules and CI under review:
-#
-# /AGENTS.md           @your-org/your-team
-# /.claude/            @your-org/your-team
-# /.github/            @your-org/your-team

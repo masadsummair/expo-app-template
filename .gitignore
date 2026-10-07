@@ -49,9 +49,8 @@ src/uniwind-types.d.ts
 .env.*
 !.env.example
 
-# e2e runner output and paid skill-eval results
+# e2e runner output
 .e2e/
-evals/results/
 
 # Firebase config and store/service credentials
 google-services.json
