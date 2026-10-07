@@ -1,8 +1,8 @@
 # Expo App Template (agent-ready)
 
-A production starting point for English-only mobile MVPs, built so AI coding agents (Claude Code first, plus Codex,
-Cursor and Gemini CLI) can plan, build, test on a device, review and ship features with project-specific rules,
-skills, agents and hooks. Phone-first, portrait. One codebase for iOS and Android.
+My personal production starting point for English-only mobile MVPs, built so AI coding agents (Claude Code first,
+plus Codex, Cursor and Gemini CLI) can plan, build, test on a device, review and ship features with project-specific
+rules, skills, agents and hooks. Phone-first, portrait. One codebase for iOS and Android.
 
 **Contents:** [At a glance](#at-a-glance) · [What you need](#what-you-need) ·
 [Tools by category](#tools-by-category) · [What's in the app](#whats-in-the-app) ·
@@ -142,7 +142,15 @@ e2e tests: a ChatGPT, GitHub Copilot, OpenCode Console or SuperGrok subscription
 
 ## Start a new app from this template
 
-1. **Create the repo:** "Use this template" on GitHub, or `gh repo create my-app --template <owner>/expo-app-template --private --clone`. Then `bun install`.
+1. **Copy it into a new app** (fresh git history, then your own remote):
+   ```bash
+   git clone --depth 1 https://github.com/masadsummair/expo-app-template my-app
+   cd my-app
+   rm -rf .git          # PowerShell: Remove-Item -Recurse -Force .git
+   git init
+   bun install          # after git init, so it can turn on the pre-commit hook
+   ```
+   Create the app's own GitHub repo and push when you're ready.
 2. **Rename it** (dry run first; add `--write` to apply):
    ```bash
    bun run rename --id com.acme.app --name "Acme" --slug acme-app
