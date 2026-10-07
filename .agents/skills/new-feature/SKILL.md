@@ -57,8 +57,8 @@ no secrets in `EXPO_PUBLIC_*`, tokens only in SecureStore.
         await expect(screen.getByTestId('profile-name')).toBeVisible();
       });
       ```
-- [ ] Coverage check — every AC must appear in a test. It lists each missing one and exits 1, so it must print
-      nothing and exit 0:
+- [ ] Coverage check — every AC must appear in a test. It lists each missing one and exits 1; done means it
+      exits 0 and prints `N/N criteria covered`:
       ```bash
       bun run specs:check <slug>
       ```

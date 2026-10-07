@@ -3,8 +3,9 @@ import { Controller, useForm } from 'react-hook-form';
 import { View } from 'react-native';
 import { z } from 'zod';
 
-import { Button, Screen, Text, TextField } from '@/components/ui';
+import { Button, FormError, Screen, Text, TextField } from '@/components/ui';
 import { env } from '@/config/env';
+import { reportError } from '@/lib/crash-reporting';
 import { useAuthStore } from '@/stores/auth-store';
 
 const schema = z.object({
@@ -28,13 +29,20 @@ export default function SignInScreen() {
   });
 
   // TODO(auth): replace with your auth provider (Clerk, Supabase, Better Auth, ...).
-  // The mock accepts any credentials, so it refuses to run in production builds.
+  // The mock accepts any credentials, so production builds refuse it. An unset APP_ENV in a release build counts as
+  // production (src/config/env.ts); release builds for e2e set EXPO_PUBLIC_APP_ENV=development explicitly.
   const onSubmit = async (_values: FormValues) => {
     if (env.APP_ENV === 'production') {
       setError('root', { message: 'Sign-in is not configured for this build.' });
       return;
     }
-    await signIn('dev-token');
+    try {
+      await signIn('dev-token');
+    } catch (error) {
+      // The keychain write can fail (Android Keystore invalidation, locked iOS keychain).
+      reportError(error, { where: 'sign-in' });
+      setError('root', { message: 'Could not sign you in. Please try again.' });
+    }
   };
 
   return (
@@ -100,11 +108,7 @@ export default function SignInScreen() {
           )}
         />
       </View>
-      {errors.root ? (
-        <Text variant="caption" className="text-danger" testID="sign-in-error">
-          {errors.root.message}
-        </Text>
-      ) : null}
+      <FormError message={errors.root?.message} testID="sign-in-error" />
     </Screen>
   );
 }

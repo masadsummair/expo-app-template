@@ -36,9 +36,9 @@ are built for and covered by the CI matrix. Not yet checked: a physical iPhone, 
 | `JAVA_HOME` | `/Applications/Android Studio.app/Contents/jbr/Contents/Home` | Android Studio's `jbr` folder | `C:\Program Files\Android\Android Studio\jbr` |
 | e2e tests | iOS and Android | Android | inside WSL2 (upstream: "On Windows, run inside WSL") |
 
-Accounts: an [Expo](https://expo.dev) account for EAS (free tier works for development builds). Optional: an Apple
-Developer account (iOS devices and the App Store), a Google Play account, Sentry, and an Anthropic API key for the AI
-steps in e2e tests. `.node-version` and CI use Node 24. Shell snippets in the skills are bash; in PowerShell write
+Accounts: an [Expo](https://expo.dev) account for EAS (free tier works for Android development builds). An Apple
+Developer Program membership (paid) is required for iOS device builds and the App Store; the iOS simulator on a Mac does not need one. Optional: a Google Play account, Sentry, and a model for the AI steps in
+e2e tests: a ChatGPT, GitHub Copilot, OpenCode Console or SuperGrok subscription, or an Anthropic API key. `.node-version` and CI use Node 24. Shell snippets in the skills are bash; in PowerShell write
 `$env:NAME = 'x'` instead of `NAME=x cmd`.
 
 ## Tools by category
@@ -158,10 +158,12 @@ steps in e2e tests. `.node-version` and CI use Node 24. Shell snippets in the sk
 5. **First run** (a development build, not Expo Go; the first build takes several minutes):
    - macOS: `bun run ios` or `bun run android`
    - Linux / Windows: start an Android emulator or plug in a device with USB debugging, then `bun run android`
-   - iOS without a Mac: `bun run eas build --profile development-device --platform ios`, install it on a registered
-     iPhone; later sessions only need `bun run start` to serve JS.
+   - iOS without a Mac: needs a paid Apple Developer Program membership and a registered iPhone. Run
+     `bun run eas device:create`, then `bun run eas build --profile development-device --platform ios` and install it;
+     later sessions only need `bun run start` to serve JS.
 6. **Replace the mock sign-in** in `src/app/sign-in.tsx` with your auth provider. The mock accepts any credentials, so it
-   refuses to sign in on production builds.
+   refuses to sign in on production builds. The e2e fixtures (`e2e/support/open-app.ts`) and the agent `context` in
+   `e2e.config.ts` depend on the testIDs `sign-in-screen`, `home-screen` and `home-sign-out`: update them with the new auth and Home.
 7. **Crash reporting (optional):** set `EXPO_PUBLIC_SENTRY_DSN`, and `SENTRY_ORG` / `SENTRY_PROJECT` /
    `SENTRY_AUTH_TOKEN` as EAS environment variables for source-map upload. Until then builds still pass because
    `eas.json` sets `SENTRY_ALLOW_FAILURE=true`; remove it once Sentry works so a failed upload fails the release build.
@@ -287,8 +289,23 @@ Tests live in `e2e/*.e2e.ts` (Playwright-style: `screen.getByTestId(...)`, `expe
   with no model key, then write the journey as a deterministic test. This is the mobile equivalent of Claude in Chrome.
 - **Dev vs release builds.** Locally the tests run against your dev build and connect it to Metro through the
   dev-client deep link. CI uses a release-style build (`E2E_BUILD=release`) with no dev launcher.
-- **Optional AI steps.** `agent.act(...)` / `agent.assert(...)` need a model: export `ANTHROPIC_API_KEY` (and
-  optionally `E2E_MODEL`). Without a key those tests are skipped. Claude subscriptions can't be used; it needs an API key.
+- **Optional AI steps.** `agent.act(...)` / `agent.assert(...)` need a model. Without one those tests are skipped and
+  the rest of the suite still runs. Use a subscription you already pay for, or an API key:
+
+  | Model source | Set up | Starting model (example id) |
+  |---|---|---|
+  | ChatGPT Plus or Pro | `bunx --no-install e2e login openai` | `gpt-6-luna` |
+  | GitHub Copilot (includes Claude models) | `bunx --no-install e2e login github-copilot` | `claude-sonnet-5` |
+  | OpenCode Console (Zen / Go) | `bunx --no-install e2e login opencode-console` | `deepseek-v4.1-flash` |
+  | SuperGrok or X Premium+ | `bunx --no-install e2e login spacexai` | `grok-4` |
+  | Anthropic API key | export `ANTHROPIC_API_KEY` | `claude-sonnet-5-5` |
+
+  Agent steps are opt-in: set `E2E_AGENT=1` (or `E2E_MODEL_PROVIDER`), otherwise they are skipped even with a key or
+  login present. The config picks `E2E_MODEL_PROVIDER` (`anthropic`, `chatgpt`, `copilot`, `opencode`, `grok`) when set, else the API
+  key (`ANTHROPIC_API_KEY`, then `OPENCODE_API_KEY`), else your one stored login; with several logins set
+  `E2E_MODEL_PROVIDER`. The starting ids are examples from the e2e docs: run `bunx --no-install e2e models` to list the ids
+  your plan serves and set one with `E2E_MODEL`, which applies to whichever provider is selected. Subscriptions use your plan's limits. Claude subscriptions are not supported
+  upstream: use an API key, or Claude models through Copilot. Logic: `e2e/support/model.ts`.
 - **Telemetry is off** (`E2E_TELEMETRY_DISABLED=1` in scripts, MCP configs and Claude settings).
 - **Risk:** e2e is pre-1.0 (Apache-2.0) and pinned exactly. The suite passes on an Android emulator and an iOS 26.2
   simulator. Known upstream issues: [#872](https://github.com/tester-army/e2e/issues/872) (iOS 27 `secureTextEntry` fill),

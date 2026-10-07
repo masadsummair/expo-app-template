@@ -1,6 +1,6 @@
 // PreToolUse(Read|Grep|Glob|Edit|Write|MultiEdit|NotebookEdit) guard for secrets, generated native code,
 // the Claude Code config itself and files that auto-approved commands execute. Guardrails, not a sandbox.
-import { classifyPath, projectRoot, runHook, type Decision, type HookInput } from './lib';
+import { classifyPath, ENV_FILES, globMatches, projectRoot, runHook, type Decision, type HookInput } from './lib';
 
 const text = (v: unknown): string | null => (typeof v === 'string' && v !== '' ? v : null);
 
@@ -21,6 +21,12 @@ export function evaluateFileTool(input: HookInput, root: string = projectRoot())
   for (const target of targets) {
     const decision = classifyPath(access, target, root);
     if (decision) return decision;
+  }
+
+  // rg whitelists any file a --glob matches, .gitignore and hidden files included: `*`, `*.env` and `{.env,x}` read .env.
+  const glob = text(ti.glob)?.replace(/^(\*\*\/|\/)+/, '');
+  if (tool === 'Grep' && glob && !glob.startsWith('!') && ENV_FILES.some((n) => globMatches(glob, n))) {
+    return { decision: 'deny', reason: `Grep glob "${ti.glob}" would search .env files, which may contain secrets. Use a glob such as "*.ts" or search a subfolder.` };
   }
 
   const edits = Array.isArray(ti.edits) ? (ti.edits as { new_string?: unknown }[]).map((e) => e?.new_string) : [];

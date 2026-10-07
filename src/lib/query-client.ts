@@ -20,6 +20,8 @@ export const queryClient = new QueryClient({
   mutationCache: new MutationCache({ onError: handleUnauthorized }),
   defaultOptions: {
     queries: { staleTime: 30_000, retry: shouldRetry },
+    // Offline, a mutation fails fast instead of pausing and firing later (e.g. a queued delete-account).
+    mutations: { networkMode: 'always' },
   },
 });
 

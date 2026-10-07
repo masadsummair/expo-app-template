@@ -1,4 +1,4 @@
-import { Switch as RNSwitch, View, type SwitchProps as RNSwitchProps } from 'react-native';
+import { Pressable, Switch as RNSwitch, type SwitchProps as RNSwitchProps } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { cn } from '@/lib/cn';
@@ -32,29 +32,31 @@ export function Switch({
   const border = asColor(useCSSVariable('--color-border'));
 
   return (
-    <View className={cn('min-h-12 flex-row items-center justify-between gap-3', className)}>
-      {/* The Switch below carries the label; hide the visible copy so it is not read twice. */}
-      <Text
-        className={cn('flex-1', disabled && 'opacity-50')}
-        accessibilityElementsHidden
-        importantForAccessibility="no"
-      >
-        {label}
-      </Text>
+    // The whole row is the control (label included); the native switch is only the visual indicator.
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: value, disabled: Boolean(disabled) }}
+      disabled={disabled}
+      onPress={() => {
+        const next = !value;
+        haptics.toggle(next);
+        onValueChange(next);
+      }}
+      testID={testID}
+      className={cn('min-h-12 flex-row items-center justify-between gap-3', className)}
+    >
+      <Text className={cn('flex-1', disabled && 'opacity-50')}>{label}</Text>
       <RNSwitch
-        accessibilityRole="switch"
-        accessibilityLabel={label}
-        accessibilityState={{ checked: value, disabled: Boolean(disabled) }}
+        accessible={false}
+        importantForAccessibility="no-hide-descendants"
         value={value}
-        onValueChange={(next) => {
-          haptics.toggle(next);
-          onValueChange(next);
-        }}
         disabled={disabled}
         trackColor={{ false: border, true: primary }}
-        testID={testID}
         {...props}
+        // After the spread: the row handles touches, so a caller's style must not make the switch tappable.
+        style={[props.style, { pointerEvents: 'none' }]}
       />
-    </View>
+    </Pressable>
   );
 }

@@ -107,6 +107,29 @@ describe('request origin guard', () => {
     },
   );
 
+  it.each(['/orders/../admin', '/orders/%2e%2e/admin', '/orders/./x', '/orders/..\\admin', '/%2E%2E', '/orders/.\t./admin', '/orders/.\n./admin'])(
+    'refuses %s so a dot segment cannot reach another endpoint',
+    async (path) => {
+      mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));
+      await expect(request({ path, schema: User })).rejects.toThrow();
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it('lets a literal percent sign through instead of throwing a URIError', async () => {
+    mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));
+    await request({ path: '/discounts/50%', schema: User });
+    expect(globalThis.fetch).toHaveBeenCalled();
+  });
+
+  it('throws for an unserialisable body instead of reporting a network problem', async () => {
+    mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));
+    const body: Record<string, unknown> = {};
+    body.self = body;
+    await expect(request({ path: '/me', method: 'POST', body, schema: User })).rejects.toThrow();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
   it('keeps encoded path segments on the API origin', async () => {
     mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));
     await request({ path: `/users/${encodeURIComponent('../../admin')}`, schema: User });

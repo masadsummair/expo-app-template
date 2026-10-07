@@ -106,8 +106,10 @@ scripts/, evals/    rename, check-*, skills sync, evals    .github/workflows/  C
   through `confirm({ destructive: true })`.
 - **Motion:** Reanimated 4 with the `@/lib/motion` presets (they follow reduce-motion); animate `transform`/`opacity` only;
   explicit `'worklet'` in `useAnimatedStyle` and gesture callbacks (reanimated#6826). No Uniwind `animate-*` (Pro only).
-- **Performance:** stay on Expo's pinned versions. Measure in release builds (`bunx expo run:android --variant release`,
-  `bunx expo run:ios --configuration Release`), not dev builds.
+- **Performance:** stay on Expo's pinned versions. Measure in release builds
+  (`SENTRY_DISABLE_AUTO_UPLOAD=true bunx expo run:android --variant release`,
+  `SENTRY_DISABLE_AUTO_UPLOAD=true bunx expo run:ios --configuration Release`; PowerShell: set
+  `$env:SENTRY_DISABLE_AUTO_UPLOAD = 'true'` first), not dev builds. Without Sentry credentials the upload step fails the build.
 
 ## Data fetching
 
@@ -171,6 +173,8 @@ Route errors: `export { ErrorFallback as ErrorBoundary } from '@/components/erro
   plus `accessibilityRole` and `accessibilityLabel`; `Button` and `TextField` require `testID` at the type level.
   E2E tests and agents select by testID; label text is unreliable in React Native.
 - New logic in `src/services|stores|lib` gets a Jest test. Hook tests use `createQueryWrapper()` from `test/query-wrapper.tsx`.
+- Never put a test file in `src/app/`: Expo Router bundles every file there as a route, and the app crashes at launch.
+  Screen tests go in `test/app/` (`test/routes.test.ts` fails verify otherwise).
 - E2E uses `e2e` (tester-army). Read the `e2e-flow` skill before writing or running an e2e test.
 
 ## Env, secrets, releases
@@ -180,6 +184,10 @@ Route errors: `export { ErrorFallback as ErrorBoundary } from '@/components/erro
   and `.env.example`. `.env` is local only; EAS builds read EAS environment variables. `app.config.ts` fails
   preview/production builds without `EXPO_PUBLIC_API_URL`, and `env.ts` requires https outside development.
 - `src/app/sign-in.tsx` is a mock that accepts any credentials and refuses production builds: replace it before release.
+  A release build without `EXPO_PUBLIC_APP_ENV` counts as production, so local release builds for e2e or perf runs set
+  `EXPO_PUBLIC_APP_ENV=development` (CI's e2e workflow does).
+  The e2e fixtures (`e2e/support/open-app.ts`) and the agent `context` in `e2e.config.ts` depend on the testIDs
+  `sign-in-screen`, `home-screen` and `home-sign-out` and on the mock's email and password fields: update them in the same change.
 - `APP_ENV=development|preview|production` selects bundle ids and names (`app.config.ts`, `eas.json`). OTA uses the
   `fingerprint` runtimeVersion policy; publish to the channel matching the build profile. EAS Update is off until
   `EAS_PROJECT_ID` is set in `app.config.ts`. The URL `scheme` must stay lowercase (uppercase breaks EAS Update).
@@ -208,6 +216,11 @@ Route errors: `export { ErrorFallback as ErrorBoundary } from '@/components/erro
 - bun can keep stale nested copies of native modules (e.g. `expo-asset/node_modules/expo-constants`) after
   `bunx expo install --fix`. Remove their nested `bun.lock` entries; if clean, delete the nested folders and run
   `bun install --frozen-lockfile`.
+- Typed routes (`typedRoutes`) are generated into `.expo/types` only while `expo start` runs; Expo SDK 57 has no command
+  that generates them alone, so a fresh clone, `typecheck` and CI do not validate `router.push`/`href`/`Stack.Screen`
+  names. After deleting or renaming a route, grep for its path. Deleting the example screens: remove `settings.tsx` and
+  `about.tsx` (and `(app)/` entries), their `Stack.Screen` lines in `_layout.tsx`, every `router.push`/`Link` to them,
+  their Jest and e2e tests, and the README/AGENTS mentions; then run `bun run start` once so types regenerate and `bun run typecheck`.
 - TypeScript 6 no longer auto-loads `@types/*`: add to `compilerOptions.types`. `expo-env.d.ts` and
   `src/uniwind-types.d.ts` are generated and gitignored; `src/types/*.d.ts` keeps `tsc` working on a fresh clone.
 - Uniwind `className` does not reach third-party components: wrap them with `withUniwind()` or use a styled inner View.

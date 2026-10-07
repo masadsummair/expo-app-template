@@ -22,7 +22,7 @@ reading code produces theories, not fixes. Try, roughly in order:
    observe, select by testID). Once it reproduces, encode it as an e2e test so it can be replayed. Select by `testID`,
    not label text.
 5. **An e2e test** in `e2e/` when the bug spans screens (see the `e2e-flow` skill).
-6. **Differential loop:** same input on iOS vs Android, dev vs release (`bunx expo run:android --variant release`, `bunx expo run:ios --configuration Release`, or `E2E_BUILD=release`),
+6. **Differential loop:** same input on iOS vs Android, dev vs release (`SENTRY_DISABLE_AUTO_UPLOAD=true bunx expo run:android --variant release`, `SENTRY_DISABLE_AUTO_UPLOAD=true bunx expo run:ios --configuration Release` (PowerShell: `$env:SENTRY_DISABLE_AUTO_UPLOAD = 'true'` first), or `E2E_BUILD=release`),
    Hermes vs expectations — many RN bugs are platform- or build-mode-specific.
 7. **Human in the loop** only as a last resort: give the user exact steps and ask for the Metro log,
    the device log, or a screen recording.

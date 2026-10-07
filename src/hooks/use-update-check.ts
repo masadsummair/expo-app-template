@@ -1,3 +1,4 @@
+import { onlineManager } from '@tanstack/react-query';
 import * as Updates from 'expo-updates';
 import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
@@ -11,8 +12,8 @@ const reload = () => Updates.reloadAsync();
 
 /**
  * Checks for an OTA update when the app becomes active (and once at launch), at most every
- * 30 minutes, only in builds where expo-updates is enabled. Downloads it in the background and
- * reports `updateReady`; the app decides when to call `reload` (never force-reloads).
+ * 30 minutes after a successful check, only in builds where expo-updates is enabled. Downloads it in the
+ * background and reports `updateReady`; the app decides when to call `reload` (never force-reloads).
  */
 export function useUpdateCheck(): { updateReady: boolean; reload: () => Promise<void> } {
   const [updateReady, setUpdateReady] = useState(false);
@@ -26,14 +27,15 @@ export function useUpdateCheck(): { updateReady: boolean; reload: () => Promise<
       const now = Date.now();
       if (running.current || now - lastCheck.current < MIN_INTERVAL_MS) return;
       running.current = true;
-      lastCheck.current = now;
       try {
         const result = await Updates.checkForUpdateAsync();
+        lastCheck.current = now;
         if (!result.isAvailable) return;
         const fetched = await Updates.fetchUpdateAsync();
         if (fetched.isNew) setUpdateReady(true);
       } catch (e) {
-        reportError(e);
+        // A failed check is retried on the next foreground; offline failures are expected, not bugs.
+        if (onlineManager.isOnline()) reportError(e, { where: 'update-check' });
       } finally {
         running.current = false;
       }

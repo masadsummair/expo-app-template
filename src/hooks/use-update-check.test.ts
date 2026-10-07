@@ -1,6 +1,9 @@
 import { act, renderHook } from '@testing-library/react-native';
+import { onlineManager } from '@tanstack/react-query';
 import * as Updates from 'expo-updates';
 import { AppState } from 'react-native';
+
+import { reportError } from '@/lib/crash-reporting';
 
 import { useUpdateCheck } from './use-update-check';
 
@@ -29,6 +32,7 @@ beforeEach(() => {
   }) as never);
   jest.mocked(Updates.checkForUpdateAsync).mockReset();
   jest.mocked(Updates.fetchUpdateAsync).mockReset();
+  jest.mocked(reportError).mockClear();
 });
 afterEach(() => {
   jest.restoreAllMocks();
@@ -66,5 +70,25 @@ describe('useUpdateCheck', () => {
     jest.setSystemTime(Date.now() + 31 * 60 * 1000);
     await act(async () => appState?.('active'));
     expect(Updates.checkForUpdateAsync).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries on the next foreground after a failed check instead of waiting 30 minutes', async () => {
+    jest.mocked(Updates.checkForUpdateAsync).mockRejectedValueOnce(new Error('boom'));
+    jest.mocked(Updates.checkForUpdateAsync).mockResolvedValue({ isAvailable: false } as never);
+    await renderHook(() => useUpdateCheck());
+    await act(async () => {});
+    expect(reportError).toHaveBeenCalledWith(expect.any(Error), { where: 'update-check' });
+
+    await act(async () => appState?.('active'));
+    expect(Updates.checkForUpdateAsync).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not report a failed check while offline', async () => {
+    jest.spyOn(onlineManager, 'isOnline').mockReturnValue(false);
+    jest.mocked(Updates.checkForUpdateAsync).mockRejectedValue(new Error('offline'));
+    await renderHook(() => useUpdateCheck());
+    await act(async () => {});
+    expect(Updates.checkForUpdateAsync).toHaveBeenCalledTimes(1);
+    expect(reportError).not.toHaveBeenCalled();
   });
 });

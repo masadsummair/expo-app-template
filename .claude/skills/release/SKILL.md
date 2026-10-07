@@ -27,6 +27,8 @@ You never push, tag, or merge as part of a release unless asked; use the git wor
 | `preview` | `preview` | preview / `….preview` | internal QA build; acts as staging |
 | `production` | `production` | production / `com.example.expoapptemplate` | stores; `autoIncrement` on |
 
+`development-device` (iOS device) needs a paid Apple Developer Program membership and a registered device: `bun run eas device:create` first.
+
 Keep channel and branch names identical. There is no staging profile — `preview` is staging.
 Every build profile sets `APP_ENV` and `EXPO_PUBLIC_APP_ENV` in its `env`. EAS Update does not read the profile
 `env` (see OTA below).

@@ -20,7 +20,8 @@ API contracts (`api-endpoint`). An E2E test is slow (about 20s per test plus a 2
 ```
 e2e.config.ts            targets: android + ios; E2E_BUILD=dev|release switches the build mode
 e2e/support/build-mode.ts  app id, Metro URL, release flag (shared by config and fixture)
-e2e/support/open-app.ts    `test` with an `openApp` fixture; import test/expect from here
+e2e/support/open-app.ts    `test` with an `openApp` fixture; import test/expect from here. Waits on the sign-in-screen,
+                           home-screen and home-sign-out testIDs: update it when the mock sign-in or Home is replaced
 e2e/<feature>.e2e.ts     one user journey per file
 .e2e/                    run output (report.json, failures/*.md, logs). Gitignored. Never edit it.
 ```
@@ -47,7 +48,7 @@ Rules:
 5. **Tests are independent.** No state carried between tests; `openApp` signs out a leftover session.
 6. **Timeouts:** the first wait in a dev build is inside `openApp` (90s). Elsewhere 10-15s. Never raise global timeouts.
 7. **Credentials:** the template's mock auth accepts any values. A real test account goes through `credentials()` / `secrets()` from `e2e` and env vars, never literals or `agent.act` params.
-8. **Agent steps** (`agent.act`, `agent.assert`) need `ANTHROPIC_API_KEY`; gate the test with `{ skip }` (see `e2e/sign-in-agent.e2e.ts`), keep one goal per `act`, and pair every agent step with a deterministic `expect`. Keep exact checks as `expect`, since `assert` always costs a model call.
+8. **Agent steps** (`agent.act`, `agent.assert`) need a model and are opt-in: they run only when `E2E_AGENT=1` or `E2E_MODEL_PROVIDER` is set, so an ambient key or login never spends quota. The model is a subscription login or `ANTHROPIC_API_KEY`, chosen in `e2e/support/model.ts` (`E2E_MODEL_PROVIDER` / `E2E_MODEL` override). Logging in is interactive and stores tokens on disk: ask the human to run `bunx --no-install e2e login openai|github-copilot|opencode-console|spacexai` in their own terminal; never run it yourself. Gate the test with `{ skip }` from `selectModelProvider()` (see `e2e/sign-in-agent.e2e.ts`), keep one goal per `act`, and pair every agent step with a deterministic `expect`. Keep exact checks as `expect`, since `assert` always costs a model call.
 9. Per-platform tests: `{ platforms: ['android'] }`.
 
 ## Explore first: use `app-tester`

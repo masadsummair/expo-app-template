@@ -11,18 +11,23 @@ TypeScript on bun, so they run the same on Windows, Linux and macOS (no `jq`, no
 blocks the call if a guard fails to load or crashes; bad input also blocks. `bun run test:hooks` runs their tests (part
 of `verify`). If `bun` itself is missing, no hook can run.
 
-- `guard-bash` (matches `Bash` and `PowerShell`) denies `npm`/`yarn`/`pnpm` installs, `npx`, `bun add`, global installs,
-  shell access to `.env*` and credential files (including heredocs and `curl -F @file`), env dumps, EAS secret reads,
-  `e2e --config`, recursive deletes of home or the project, commits on protected branches and force pushes to `main`.
-  `git … --output` counts as a write and is denied for protected files. It asks before EAS submit, update, channel,
-  credentials, env writes and production builds (or a build with no `--profile`). It parses pipes, `$()`, `bash -c`
-  and `eval`, and checks shell write targets.
-- `guard-files` denies reads and edits of `.env*`, edits of `ios/` and `android/`, and secret-looking `EXPO_PUBLIC_*`
+- `guard-bash` (matches `Bash` and `PowerShell`) denies `npm`/`yarn`/`pnpm` installs, `npx`, `bun add|update|remove|link|create`,
+  global installs, `@latest` and other unpinned runners (and runners fetched from a git repo or URL), shell access to `.env*` (including Windows `.env.`, `.env::$DATA`
+  and `ENV~1` spellings) and to credential files (keystores, `.p8`, EAS credentials files, `~/.expo`, `~/.config/e2e`, agent and git
+  logins), recursive grep/rg/`git grep` that would sweep `.env`, including an rg `-g` glob that matches it (pass
+  `--exclude='.env*'` or `-g '!.env*'`, or search a subfolder), jest/eslint flags that load other files (`--config`, `--globalSetup`...), env dumps and secret env reads
+  (also `Env:`, `[Environment]::GetEnvironmentVariable`, `iex`), EAS and GitHub token reads, `e2e --config` and `e2e feedback`,
+  recursive deletes of home or the project, commits on protected branches and force pushes to `main`.
+  `git … --output` counts as a write and is denied for protected files. It asks before `git push`, `gh pr merge`,
+  `e2e login|logout`, EAS submit, update, channel, credentials, env writes and production builds (or a build with no
+  `--profile`). It parses pipes, `$()`, `bash -c` and `eval`, and checks shell write targets.
+- `guard-files` denies reads and edits of `.env*` (and a Grep `glob` that matches it), edits of `ios/` and `android/`, and secret-looking `EXPO_PUBLIC_*`
   names. It asks before edits to `package.json`, `bun.lock`, tool and TS configs, `app.config.ts`, `eas.json`,
   `scripts/`, `evals/`, `e2e/`, `test/setup.ts`, `.github/`, `.vscode/`, `.cursor/`, `.codex/`, `.gemini/`,
-  `bunfig.toml`, `.npmrc`, `.claude/` (hooks, agents, skills, settings) and `.mcp.json`. Path checks ignore case.
+  `bunfig.toml`, `.npmrc`, `.claude/` (everything in it), `.agents/`, `CLAUDE.md`, `GEMINI.md`, `.cursorignore`,
+  `.geminiignore`, `.fingerprintignore`, `.husky/`, lefthook config and `.mcp.json`. Path checks ignore case.
 - `lint-changed` lints each file after you edit it.
-- `.claude/settings.json` also asks before `git push`, `gh pr merge` and production-affecting EAS commands.
+- `.claude/settings.json` also denies Read of credential files and asks before `git push`, `gh pr merge` and production-affecting EAS commands.
 
 The hooks are guardrails against mistakes and prompt injection, not a sandbox. If a hook blocks a command, do not work
 around it: report the command and the message.

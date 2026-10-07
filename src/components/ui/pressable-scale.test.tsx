@@ -34,4 +34,13 @@ describe('PressableScale', () => {
     expect(onPressIn).toHaveBeenCalledTimes(1);
     expect(onPressOut).toHaveBeenCalledTimes(1);
   });
+
+  it('puts className on the pressable so padding is tappable', async () => {
+    await render(
+      <PressableScale testID="home-card" accessibilityLabel="Open orders" className="p-4 min-h-12">
+        <Text>Orders</Text>
+      </PressableScale>,
+    );
+    expect(screen.getByTestId('home-card').props.className).toBe('p-4 min-h-12');
+  });
 });

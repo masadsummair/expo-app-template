@@ -44,6 +44,14 @@ if (!id || !name || !slug) {
 if (!/^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*)+$/.test(id)) {
   fail(`--id "${id}" must be reverse-DNS: lowercase letters and digits, dot-separated, 2+ segments, each starting with a letter (e.g. com.acme.app). No underscores: iOS bundle ids reject them.`);
 }
+const JAVA_RESERVED = new Set(
+  ('abstract assert boolean break byte case catch char class const continue default do double else enum extends final ' +
+    'finally float for goto if implements import instanceof int interface long native new package private protected ' +
+    'public return short static strictfp super switch synchronized this throw throws transient try void volatile while ' +
+    'true false null').split(' '),
+);
+const reserved = id.split('.').find((segment) => JAVA_RESERVED.has(segment));
+if (reserved) fail(`--id "${id}" has the segment "${reserved}", a Java reserved word: the Android package name would be invalid.`);
 if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
   fail(`--slug "${slug}" must be lowercase letters, digits and single hyphens (e.g. acme-app).`);
 }

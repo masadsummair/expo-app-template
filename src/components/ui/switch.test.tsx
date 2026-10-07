@@ -8,7 +8,7 @@ jest.mock('uniwind', () => ({
 }));
 
 describe('Switch', () => {
-  it('exposes switch role, label and checked state', async () => {
+  it('exposes switch role, label and checked state on the whole row', async () => {
     await render(
       <Switch
         label="Notifications"
@@ -23,7 +23,7 @@ describe('Switch', () => {
     expect(el.props.accessibilityState).toMatchObject({ checked: true });
   });
 
-  it('calls onValueChange with the new value', async () => {
+  it('toggles when the row or its label is pressed', async () => {
     const onValueChange = jest.fn();
     await render(
       <Switch
@@ -33,7 +33,24 @@ describe('Switch', () => {
         onValueChange={onValueChange}
       />,
     );
-    await fireEvent(screen.getByTestId('settings-notifications'), 'valueChange', true);
+    await fireEvent.press(screen.getByTestId('settings-notifications'));
+    await fireEvent.press(screen.getByText('Notifications'));
+    expect(onValueChange).toHaveBeenCalledTimes(2);
     expect(onValueChange).toHaveBeenCalledWith(true);
+  });
+
+  it('does not toggle while disabled', async () => {
+    const onValueChange = jest.fn();
+    await render(
+      <Switch
+        label="Notifications"
+        value={false}
+        disabled
+        testID="settings-notifications"
+        onValueChange={onValueChange}
+      />,
+    );
+    await fireEvent.press(screen.getByTestId('settings-notifications'));
+    expect(onValueChange).not.toHaveBeenCalled();
   });
 });
