@@ -1,10 +1,10 @@
 # Skill and agent evals
 
-Two checks for the `.claude/` kit. One is free and runs in CI. The other calls a model and is opt-in.
+Two checks for the `.claude/` kit. One is free and runs in the pre-commit hook. The other calls a model and is opt-in.
 
 | Check | Command | Needs | Cost | When |
 |---|---|---|---|---|
-| Structural lint | `bun run lint:claude` | nothing | free | every PR (CI), after editing any skill or agent |
+| Structural lint | `bun run lint:claude` | nothing | free | every commit (pre-commit hook), after editing any skill or agent |
 | Lint self-test | `bun evals/lint-selftest.ts` | nothing | free | after editing `scripts/lint-claude.ts` |
 | Trigger evals | `bun run evals:skills` | `claude` CLI, logged in | about $0.05-0.10 per run | after editing a skill description, before a release, after a Claude Code upgrade |
 

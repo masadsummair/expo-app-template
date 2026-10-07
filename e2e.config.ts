@@ -5,16 +5,16 @@ import { APP_ID, isReleaseBuild } from './e2e/support/build-mode';
 import { createModel, selectModelProvider } from './e2e/support/model';
 
 // e2e (tester-army/e2e) sends anonymous usage telemetry unless told not to. The package scripts, the
-// CI workflow and the e2e entry in .mcp.json set E2E_TELEMETRY_DISABLED=1. If you run `bunx e2e` by
+// e2e entry in .mcp.json set E2E_TELEMETRY_DISABLED=1. If you run `bunx e2e` by
 // hand, export it yourself.
 //
 // Two build modes, one suite:
 //   dev (default)  a development build that loads JS from Metro; this config starts Metro, or reuses
 //                  the one you already run on :8081.
 //   release        E2E_BUILD=release, a release-style build with the bundle embedded. No Metro, no
-//                  dev launcher. This is what CI runs (a dev build cannot run in CI).
+//                  dev launcher; it needs no Metro.
 
-// Metro for the dev-client build. `reuseExisting` attaches to a Metro you already run (ignored in CI).
+// Metro for the dev-client build. `reuseExisting` attaches to a Metro you already run.
 // The child process inherits only PATH and HOME plus `env`, so everything it needs goes in `env`.
 const devApp = {
   command: {

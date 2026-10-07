@@ -1,0 +1,5 @@
+#!/bin/sh
+# This template has no CI: every check runs here, before each commit (typecheck, lint, unit and hook tests,
+# docs, skills copy, contrast, privacy). e2e needs a booted device, so run it yourself: bun run test:e2e:android|ios.
+# Enabled by `bun install` (scripts/install-git-hooks.ts). Skip once, deliberately: git commit --no-verify
+exec bun run verify

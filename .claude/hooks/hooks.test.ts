@@ -792,6 +792,8 @@ describe('guard-files', () => {
     ['ask', 'Edit', '.geminiignore', 'x'],
     ['ask', 'Edit', '.fingerprintignore', 'x'],
     ['ask', 'Write', '.husky/pre-commit', 'x'],
+    ['ask', 'Write', '.githooks/pre-commit', 'x'],
+    ['ask', 'Edit', '.GitHooks/pre-commit', 'x'],
     ['ask', 'Write', 'lefthook.yml', 'x'],
     ['allow', 'Edit', 'AGENTS.md', 'x'],
     ['allow', 'Edit', 'src/lib/claude.md', 'x'],

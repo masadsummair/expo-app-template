@@ -12,7 +12,7 @@ import type { ModelInstance } from 'e2e';
  *
  * Picked in this order:
  *  1. `E2E_MODEL_PROVIDER` (anthropic | chatgpt | copilot | opencode | grok), when set;
- *  2. `anthropic` when `ANTHROPIC_API_KEY` is set, else `opencode` when `OPENCODE_API_KEY` is set (CI without a login);
+ *  2. `anthropic` when `ANTHROPIC_API_KEY` is set, else `opencode` when `OPENCODE_API_KEY` is set (a machine without a login);
  *  3. the one subscription you signed in to with `bunx --no-install e2e login <openai|github-copilot|opencode-console|spacexai>`.
  * `E2E_MODEL` overrides the model id of whichever provider is selected; `bunx --no-install e2e models` lists the ids
  * your login serves.

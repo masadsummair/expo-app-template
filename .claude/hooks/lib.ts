@@ -93,7 +93,7 @@ const TOOL_CONFIG = /^(\.(vscode|codex|gemini|cursor)|e2e)(\/|$)|^test\/setup\.t
 
 // Slash commands carry allowed-tools and shell injection; the ignore files are the secret-hiding control for Cursor and Gemini.
 const AGENT_CONTROL =
-  /^(\.claude|\.agents|\.husky)(\/|$)|^(claude\.md|gemini\.md|\.cursorignore|\.geminiignore|\.fingerprintignore|\.?lefthook(-local)?\.ya?ml)$/i;
+  /^(\.claude|\.agents|\.husky|\.githooks)(\/|$)|^(claude\.md|gemini\.md|\.cursorignore|\.geminiignore|\.fingerprintignore|\.?lefthook(-local)?\.ya?ml)$/i;
 
 /** Decision for touching `path`. `read` only checks secrets; `write` also checks protected files. */
 export function classifyPath(access: 'read' | 'write', path: string, root: string): Decision | null {

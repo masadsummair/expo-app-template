@@ -37,7 +37,7 @@ const PATH_ROOTS = ["src", ".claude", ".github", ".eas", "e2e", "scripts", "spec
 const ROOT_FILE = /^[\w.-]+\.(md|json|js|yml|yaml|lock)$|^[\w-]+\.config\.ts$|^\.env(\.example)?$|^LICENSE$/;
 
 const docs = [
-  "README.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".github/copilot-instructions.md",
+  "README.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md",
   "specs/README.md", "specs/_template.md", "THIRD_PARTY_NOTICES.md",
 ].filter((f) =>
   existsSync(at(f)),
@@ -185,16 +185,15 @@ for (const f of ["CLAUDE.md", "GEMINI.md"]) {
     for (const m of t.matchAll(/React Native (\d+\.\d+)/g)) if (rnMinor && m[1] !== rnMinor) err(f, `says React Native ${m[1]} but package.json has ${dep("react-native")}`);
     for (const m of t.matchAll(/React (19\.\d+)/g)) if (reactMinor && m[1] !== reactMinor) err(f, `says React ${m[1]} but package.json has react ${dep("react")}`);
   }
-  const ci = readIf(".github/workflows/ci.yml");
-  // CI reads `.node-version` (node-version-file); fall back to an inline `node-version:`.
-  const nodeCi = readIf(".node-version")?.trim().match(/^v?(\d+)/)?.[1] ?? ci?.match(/node-version:\s*["']?(\d+)/)?.[1];
-  const bunCi = ci?.match(/bun-version:\s*["']?(\d+)\.(\d+)/);
+  // The pinned toolchain: `.node-version` and package.json `packageManager` (bun@x.y.z).
+  const nodeCi = readIf(".node-version")?.trim().match(/^v?(\d+)/)?.[1];
+  const bunCi = (readIf("package.json") ?? "").match(/"packageManager":\s*"bun@(\d+)\.(\d+)/);
   for (const f of docs) {
     const t = text[f] ?? "";
-    for (const m of t.matchAll(/\bNode (\d+)\b/g)) if (nodeCi && m[1] !== nodeCi) err(f, `says Node ${m[1]} but CI uses Node ${nodeCi}`);
+    for (const m of t.matchAll(/\bNode (\d+)\b/g)) if (nodeCi && m[1] !== nodeCi) err(f, `says Node ${m[1]} but .node-version is ${nodeCi}`);
     for (const m of t.matchAll(/bun ≥ (\d+)\.(\d+)/g)) {
       if (bunCi && (Number(m[1]) > Number(bunCi[1]) || (Number(m[1]) === Number(bunCi[1]) && Number(m[2]) > Number(bunCi[2])))) {
-        err(f, `requires bun ≥ ${m[1]}.${m[2]} but CI pins bun ${bunCi[1]}.${bunCi[2]}`);
+        err(f, `requires bun ≥ ${m[1]}.${m[2]} but packageManager pins bun ${bunCi[1]}.${bunCi[2]}`);
       }
     }
   }
