@@ -16,7 +16,8 @@ rules, so a rule is never "fixed" by editing it to match code that broke it.
 
 Only these files, with `Edit` (never `Write`, never create files):
 - `AGENTS.md` — the single source of truth for rules, stack, layout, commands, gotchas and the skills/agents tables.
-- `README.md` — human onboarding, commands table, "what is included".
+- `README.md` — short human overview: quick start, daily workflow, top commands, "what's inside", docs index.
+- `docs/*.md` — the detail behind it: `setup.md`, `stack.md`, `ai-kit.md`, `testing.md`, `release.md`.
 - `CLAUDE.md` — Claude Code specifics only (hooks, MCP servers, its agents/skills table). It must keep `@AGENTS.md` as
   its first line. Never copy a rule from `AGENTS.md` into it. `GEMINI.md` is the same: import only.
 - `.claude/skills/SOURCES.md` — only the sentence listing skills "authored for this template" and the vendored table
@@ -46,9 +47,9 @@ If a hook blocks a Bash call, do not work around it: report the command and the 
    - Placeholder or false positive: report it; the allowlist is the `MISSING_PATH_OK` set in `scripts/check-docs.ts`,
      which you do not edit; say which entry to add.
 3. Check what the script cannot (read the files):
-   - The commands table in `README.md` against `AGENTS.md` "Commands" and `package.json` scripts, including prerequisites
+   - The commands in `README.md` and `docs/` against `AGENTS.md` "Commands" and `package.json` scripts, including prerequisites
      (bun, Node, Xcode on macOS, JDK + Android SDK).
-   - Platform support: README Prerequisites and `AGENTS.md` must say per OS what works (iOS builds need macOS or EAS
+   - Platform support: `docs/setup.md` prerequisites and `AGENTS.md` must say per OS what works (iOS builds need macOS or EAS
      cloud) and flag macOS-only paths (`JAVA_HOME`, `adb` location). Hooks run on bun, so no `jq`; verify with
      `bun run test:hooks`.
    - The skills and agents tables against each file's `description` frontmatter: the "use for" text must still be what

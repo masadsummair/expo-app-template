@@ -255,7 +255,9 @@ for (const f of claudeFiles) {
     err(r, "mentions Maestro but .maestro/ and the test:e2e script are gone; update to the e2e framework");
 }
 
-for (const doc of ["CLAUDE.md", "README.md", "AGENTS.md"]) {
+const docsDir = join(root, "docs");
+const docPages = existsSync(docsDir) ? readdirSync(docsDir).filter((n) => n.endsWith(".md")).map((n) => `docs/${n}`) : [];
+for (const doc of ["CLAUDE.md", "README.md", "AGENTS.md", ...docPages]) {
   const p = join(root, doc);
   if (!existsSync(p)) continue;
   for (const m of read(p).matchAll(/\.claude\/(skills|agents)\/([a-z0-9-]+)/g)) {

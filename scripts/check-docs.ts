@@ -33,12 +33,13 @@ const MISSING_PATH_OK = new Set([
   "SKILL.md", // generic file name used in prose, not a root file
 ]);
 // Root-level or top-level names that make a backtick token count as a repo path.
-const PATH_ROOTS = ["src", ".claude", ".github", ".eas", "e2e", "scripts", "specs", "assets", "evals", "licenses", "ios", "android"];
+const PATH_ROOTS = ["src", ".claude", ".github", ".githooks", ".eas", "docs", "e2e", "examples", "scripts", "specs", "test", "assets", "evals", "licenses", "ios", "android"];
 const ROOT_FILE = /^[\w.-]+\.(md|json|js|yml|yaml|lock)$|^[\w-]+\.config\.ts$|^\.env(\.example)?$|^LICENSE$/;
 
 const docs = [
   "README.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md",
   "specs/README.md", "specs/_template.md", "THIRD_PARTY_NOTICES.md",
+  ...(existsSync(at("docs")) ? readdirSync(at("docs")).filter((n) => n.endsWith(".md")).map((n) => `docs/${n}`) : []),
 ].filter((f) =>
   existsSync(at(f)),
 );
@@ -207,9 +208,11 @@ for (const f of ["CLAUDE.md", "GEMINI.md"]) {
 
 // 7. Reverse: package.json scripts nobody documented (warning only: some are internal).
 {
-  const documented = (text["README.md"] ?? "") + (text["AGENTS.md"] ?? "") + (text["CLAUDE.md"] ?? "");
+  const documented = ["README.md", "AGENTS.md", "CLAUDE.md", ...docs.filter((f) => f.startsWith("docs/"))]
+    .map((f) => text[f] ?? "")
+    .join("");
   for (const s of scripts) {
-    if (!documented.includes(s)) warn("package.json", `script "${s}" is not mentioned in README.md, AGENTS.md or CLAUDE.md`);
+    if (!documented.includes(s)) warn("package.json", `script "${s}" is not mentioned in README.md, AGENTS.md, CLAUDE.md or docs/`);
   }
 }
 
