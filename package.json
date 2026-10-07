@@ -65,6 +65,7 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "prepare": "bun scripts/install-git-hooks.ts",
     "start": "expo start --dev-client",
     "ios": "expo run:ios",
     "android": "expo run:android",

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Single source of truth for every AI coding agent working in this repo (Claude Code, Codex, Cursor, Copilot, Gemini CLI,
+Single source of truth for every AI coding agent working in this repo (Claude Code, Codex, Cursor, Gemini CLI,
 Windsurf, Zed, Amp, opencode, ...). `CLAUDE.md` and `GEMINI.md` import this file; do not copy its rules anywhere else.
 
 <!-- BEGIN upstream (create-expo-app). Commands rewritten from npx to bunx: this repo is bun-only. -->
@@ -70,10 +70,12 @@ Runs in a **development build**, not Expo Go (MMKV, Sentry, keyboard-controller 
 - `bun run ios`, `xcrun`, `xed` and `pod` need macOS; elsewhere build iOS on EAS
   (`bun run eas build --profile development-device --platform ios`; always pass `--profile`, the default is production).
   Android needs a JDK (Android Studio's works) and `ANDROID_HOME`; keep the repo path short on Windows.
-- Node ≥ 22.12 and bun ≥ 1.3.7 (`engines`; `.node-version` and CI use Node 24). Claude hooks run on bun: no `jq`, no bash.
+- Node ≥ 22.12 and bun ≥ 1.3.7 (`engines`; `.node-version` pins Node 24). Claude hooks run on bun: no `jq`, no bash.
 - Shell snippets in skills are bash. In PowerShell write `$env:NAME = 'x'` instead of `NAME=x cmd`, and `gradlew.bat`.
-- Verified on macOS only (iOS simulator, Android emulator). Windows and Linux support is designed in but not yet run: the
-  CI matrix (checks on Linux, Windows, macOS; Android e2e on Linux) is the first real test.
+- Verified on macOS (iOS simulator, Android emulator); the checks have also passed on Windows and Linux. There is no
+  GitHub CI/CD (optional workflows live in `examples/github-actions/`): `.githooks/pre-commit` runs `bun run verify`
+  before every commit (`bun install` enables it). Run
+  `bun run doctor` and the e2e suite yourself before a release; never bypass the hook with `--no-verify` unasked.
 
 ## Layout
 
@@ -85,7 +87,8 @@ src/stores/         Zustand stores (auth-store: token in SecureStore; theme-stor
 src/lib/            storage, query-client + query-setup, error-message, toast, haptics, motion, a11y, confirm, cn, ...
 src/hooks/, src/config/ (env.ts: zod-validated EXPO_PUBLIC_*; flags.ts), src/global.css (design tokens, light + dark)
 e2e.config.ts, e2e/ e2e config and tests (tester-army)     specs/  feature specs (AC-n criteria)
-scripts/, evals/    rename, check-*, skills sync, evals    .github/workflows/  CI + e2e
+scripts/, evals/    rename, check-*, skills sync, evals      .githooks/  pre-commit (verify)
+examples/github-actions/  optional CI to copy into .github/ (the template runs no CI/CD)
 .claude/            skills, agents, hooks                  .agents/skills/  generated copy for Codex and Gemini
 ```
 
@@ -185,7 +188,7 @@ Route errors: `export { ErrorFallback as ErrorBoundary } from '@/components/erro
   preview/production builds without `EXPO_PUBLIC_API_URL`, and `env.ts` requires https outside development.
 - `src/app/sign-in.tsx` is a mock that accepts any credentials and refuses production builds: replace it before release.
   A release build without `EXPO_PUBLIC_APP_ENV` counts as production, so local release builds for e2e or perf runs set
-  `EXPO_PUBLIC_APP_ENV=development` (CI's e2e workflow does).
+  `EXPO_PUBLIC_APP_ENV=development`.
   The e2e fixtures (`e2e/support/open-app.ts`) and the agent `context` in `e2e.config.ts` depend on the testIDs
   `sign-in-screen`, `home-screen` and `home-sign-out` and on the mock's email and password fields: update them in the same change.
 - `APP_ENV=development|preview|production` selects bundle ids and names (`app.config.ts`, `eas.json`). OTA uses the
@@ -217,7 +220,7 @@ Route errors: `export { ErrorFallback as ErrorBoundary } from '@/components/erro
   `bunx expo install --fix`. Remove their nested `bun.lock` entries; if clean, delete the nested folders and run
   `bun install --frozen-lockfile`.
 - Typed routes (`typedRoutes`) are generated into `.expo/types` only while `expo start` runs; Expo SDK 57 has no command
-  that generates them alone, so a fresh clone, `typecheck` and CI do not validate `router.push`/`href`/`Stack.Screen`
+  that generates them alone, so a fresh clone and `typecheck` do not validate `router.push`/`href`/`Stack.Screen`
   names. After deleting or renaming a route, grep for its path. Deleting the example screens: remove `settings.tsx` and
   `about.tsx` (and `(app)/` entries), their `Stack.Screen` lines in `_layout.tsx`, every `router.push`/`Link` to them,
   their Jest and e2e tests, and the README/AGENTS mentions; then run `bun run start` once so types regenerate and `bun run typecheck`.
@@ -254,7 +257,7 @@ Review roles live in `.claude/agents/*.md`: `rn-reviewer` (before every commit/P
 
 ## Other agents (no hooks)
 
-Only Claude Code enforces the hard rules with hooks. In Codex, Cursor, Copilot and Gemini CLI keep the default approval
+Only Claude Code enforces the hard rules with hooks. In Codex, Cursor and Gemini CLI keep the default approval
 mode, do not auto-approve shell commands or MCP tools, and review the diff against the hard rules. `.cursorignore` and
 `.geminiignore` hide secrets from indexing and `@` sharing only; they do not cover Cursor's terminal or MCP tools. Codex
 needs the project trusted and `codex mcp login expo`; Gemini CLI needs the folder trusted for `.gemini/settings.json`.

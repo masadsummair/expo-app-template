@@ -25,7 +25,7 @@ of `verify`). If `bun` itself is missing, no hook can run.
   names. It asks before edits to `package.json`, `bun.lock`, tool and TS configs, `app.config.ts`, `eas.json`,
   `scripts/`, `evals/`, `e2e/`, `test/setup.ts`, `.github/`, `.vscode/`, `.cursor/`, `.codex/`, `.gemini/`,
   `bunfig.toml`, `.npmrc`, `.claude/` (everything in it), `.agents/`, `CLAUDE.md`, `GEMINI.md`, `.cursorignore`,
-  `.geminiignore`, `.fingerprintignore`, `.husky/`, lefthook config and `.mcp.json`. Path checks ignore case.
+  `.geminiignore`, `.fingerprintignore`, `.githooks/`, `.husky/`, lefthook config and `.mcp.json`. Path checks ignore case.
 - `lint-changed` lints each file after you edit it.
 - `.claude/settings.json` also denies Read of credential files and asks before `git push`, `gh pr merge` and production-affecting EAS commands.
 
@@ -59,7 +59,7 @@ Subagents (`.claude/agents/`), dispatch when:
 
 Kit checks: `bun run lint:claude` (skill/agent frontmatter, free), `bun run docs:check` (docs match the repo),
 `bun run skills:check` (`.agents/skills` matches `.claude/skills`); all three are part of `verify`.
-`bun run evals:skills` is opt-in and paid (`evals/README.md`); never in CI.
+`bun run evals:skills` is opt-in and paid (`evals/README.md`); never in the pre-commit hook.
 Production builds, store submits, production OTA publishes and rollbacks always need explicit approval in the session.
 
 ## Git

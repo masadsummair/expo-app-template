@@ -72,7 +72,7 @@ bun run eas build --profile production --platform all       # human gate
 - `eas.json` pins only `node`. To pin the build image to the SDK, add `"image": "sdk-57"` to `build.base` — ask first.
 - First iOS build: EAS prompts for Apple credentials interactively. Hand over.
 - Smoke-test the exact preview build on a device before publishing to production. Its app id is
-  `com.example.expoapptemplate.preview`, not the `.dev` id. CI e2e builds with Gradle, not an EAS profile.
+  `com.example.expoapptemplate.preview`, not the `.dev` id. Local release e2e builds with Gradle, not an EAS profile.
 
 ## Submit (human gate)
 

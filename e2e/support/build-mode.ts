@@ -1,6 +1,6 @@
 /** Shared by e2e.config.ts and the open-app fixture, so the two cannot disagree about the build under test. */
 
-/** `release` is a release-style build with the JS bundle embedded (CI). Anything else is a development build. */
+/** `release` is a release-style build with the JS bundle embedded (no Metro). Anything else is a development build. */
 export const isReleaseBuild = process.env.E2E_BUILD === 'release';
 
 /** Development builds use the `.dev` application id (see app.config.ts). Override for a preview or production build. `bun scripts/rename.ts` updates the default. */

@@ -1,14 +1,14 @@
 # Expo App Template (agent-ready)
 
 A production starting point for English-only mobile MVPs, built so AI coding agents (Claude Code first, plus Codex,
-Cursor, Copilot and Gemini CLI) can plan, build, test on a device, review and ship features with project-specific rules,
+Cursor and Gemini CLI) can plan, build, test on a device, review and ship features with project-specific rules,
 skills, agents and hooks. Phone-first, portrait. One codebase for iOS and Android.
 
 **Contents:** [At a glance](#at-a-glance) · [What you need](#what-you-need) ·
 [Tools by category](#tools-by-category) · [What's in the app](#whats-in-the-app) ·
 [Start a new app](#start-a-new-app-from-this-template) · [AI tools](#ai-tools) · [Commands](#everyday-commands) ·
 [Feature workflow](#building-a-feature-with-an-agent) · [E2E](#e2e-testing-tester-armye2e) · [Release](#release-and-ops) ·
-[CI](#ci)
+[Checks before commit](#checks-before-commit)
 
 ## At a glance
 
@@ -16,14 +16,14 @@ skills, agents and hooks. Phone-first, portrait. One codebase for iOS and Androi
 |---|---|
 | Mobile platforms | iOS and Android (development builds; iPad runs the iPhone layout) |
 | Your computer | macOS, Linux, Windows (iOS builds without a Mac go through EAS) |
-| AI coding tools | Claude Code (skills, subagents, hooks, MCP), Codex, Cursor, GitHub Copilot, Gemini CLI |
+| AI coding tools | Claude Code (skills, subagents, hooks, MCP), Codex, Cursor, Gemini CLI |
 | AI kit | 25 skills (13 authored, 11 vendored, 1 adapted), 7 subagents, 3 hooks, 2 MCP servers |
 | Testing | unit tests, on-device e2e tests, 9 checks in one `bun run verify` |
-| CI | GitHub Actions on Linux, Windows and macOS, plus Android e2e on an emulator |
+| Checks | local: a git pre-commit hook runs `bun run verify`; optional GitHub Actions in `examples/github-actions/` |
 | Releases | EAS Build, Submit and Update (OTA), three app variants |
 
-Verified so far on macOS (iOS simulator, Android emulator). Windows and Linux
-are built for and covered by the CI matrix. Not yet checked: a physical iPhone, screen readers by ear, haptics feel.
+Verified on macOS (iOS simulator, Android emulator). The checks have also passed on Windows and Linux, and the e2e
+suite on a Linux Android emulator. Not yet checked: a physical iPhone, screen readers by ear, haptics feel.
 
 ## What you need
 
@@ -38,7 +38,7 @@ are built for and covered by the CI matrix. Not yet checked: a physical iPhone, 
 
 Accounts: an [Expo](https://expo.dev) account for EAS (free tier works for Android development builds). An Apple
 Developer Program membership (paid) is required for iOS device builds and the App Store; the iOS simulator on a Mac does not need one. Optional: a Google Play account, Sentry, and a model for the AI steps in
-e2e tests: a ChatGPT, GitHub Copilot, OpenCode Console or SuperGrok subscription, or an Anthropic API key. `.node-version` and CI use Node 24. Shell snippets in the skills are bash; in PowerShell write
+e2e tests: a ChatGPT, GitHub Copilot, OpenCode Console or SuperGrok subscription, or an Anthropic API key. `.node-version` pins Node 24. Shell snippets in the skills are bash; in PowerShell write
 `$env:NAME = 'x'` instead of `NAME=x cmd`.
 
 ## Tools by category
@@ -120,12 +120,12 @@ e2e tests: a ChatGPT, GitHub Copilot, OpenCode Console or SuperGrok subscription
 | MCP servers | `e2e` (drive the emulator/simulator) and `expo` (Expo docs + EAS) |
 | Evals (`evals/`) | opt-in, paid checks that each skill triggers on the right requests |
 
-### CI and repo
+### Repo and local checks
 
 | Tool | What it does here |
 |---|---|
-| GitHub Actions | checks on Linux, Windows and macOS; Android e2e on an emulator; Copilot setup |
-| Dependabot | keeps the pinned GitHub Actions current |
+| git pre-commit hook (`.githooks/pre-commit`) | runs `bun run verify` before every commit; turned on by `bun install` |
+| `examples/github-actions/` | optional CI (checks, Android e2e, Dependabot) to copy into `.github/` if your app wants it |
 | bun | package manager and script runner (never npm, yarn or pnpm) |
 | `.gitattributes` · `.editorconfig` | LF line endings, so Windows checkouts don't break scripts |
 
@@ -181,7 +181,6 @@ authored in `.claude/skills/`; `.agents/skills/` is a generated copy for tools t
 | Claude Code | `CLAUDE.md` → `AGENTS.md` | `.claude/skills` | `.claude/agents` | `.mcp.json` | hooks and permissions (enforced) |
 | Codex | `AGENTS.md` | `.agents/skills` | read the agent file as a checklist | `.codex/config.toml` (trusted project; `codex mcp login expo`) | none |
 | Cursor | `AGENTS.md` | `.claude/skills` and `.agents/skills` (listed twice; delete `.agents/` if Cursor-only) | reads `.claude/agents` | `.cursor/mcp.json` | `.cursorignore` (indexing only) |
-| Copilot | `AGENTS.md`, `.github/copilot-instructions.md` (review checklist) | `.claude/skills` or `.agents/skills` where supported, else read the SKILL.md | read the agent file as a checklist | `.vscode/mcp.json` | none |
 | Gemini CLI | `GEMINI.md` → `AGENTS.md` | `.agents/skills` | read the agent file as a checklist | `.gemini/settings.json` (trusted folder) | `.geminiignore` (`@` sharing only) |
 
 Only Claude Code enforces the hard rules (no `.env` reads, no npm/npx, no commits on `main`, no hand edits of `ios/` or
@@ -288,7 +287,7 @@ Tests live in `e2e/*.e2e.ts` (Playwright-style: `screen.getByTestId(...)`, `expe
 - **Agents explore, then encode.** The `e2e` MCP server lets an agent drive the emulator/simulator (observe, tap, type)
   with no model key, then write the journey as a deterministic test. This is the mobile equivalent of Claude in Chrome.
 - **Dev vs release builds.** Locally the tests run against your dev build and connect it to Metro through the
-  dev-client deep link. CI uses a release-style build (`E2E_BUILD=release`) with no dev launcher.
+  dev-client deep link. `E2E_BUILD=release` runs the suite against a release-style build with no dev launcher.
 - **Optional AI steps.** `agent.act(...)` / `agent.assert(...)` need a model. Without one those tests are skipped and
   the rest of the suite still runs. Use a subscription you already pay for, or an API key:
 
@@ -319,23 +318,27 @@ Skills: `release` (build, submit, OTA update/rollback, with a fingerprint gate t
 (push needs `bunx expo install expo-notifications`, `EAS_PROJECT_ID`, FCM/APNs credentials and a new native build).
 Agent: `sdk-upgrader`. Production-affecting EAS commands are never pre-approved and always prompt.
 
-## CI
+## Checks before commit
 
-| Workflow | Runs |
-|---|---|
-| `.github/workflows/ci.yml` | `bun run verify` and expo-doctor on Linux; most checks (no contrast, privacy or doctor) on Windows (CRLF checkout) and macOS; every PR |
-| `.github/workflows/e2e.yml` | builds a release-style Android APK and runs the e2e suite on an emulator: PRs labelled `e2e`, pushes to `main`, manual dispatch; no secrets; no iOS job |
-| `.github/workflows/copilot-setup-steps.yml` | installs bun and the dependencies for the Copilot cloud agent |
-| `.github/dependabot.yml` | updates GitHub Actions |
+There is no CI/CD on GitHub: checks run on your machine.
 
-**CODEOWNERS** (`.github/CODEOWNERS`) is fully commented out: replace the placeholder owner, uncomment it and enable
-"Require review from Code Owners" in branch protection.
+- **Pre-commit hook:** `.githooks/pre-commit` runs `bun run verify` (typecheck, lint, unit tests, hook tests,
+  `lint:claude`, `docs:check`, `skills:check`, `contrast:check`, `privacy:check`) and blocks the commit if anything fails.
+  `bun install` turns it on (the `prepare` script sets `git config core.hooksPath .githooks`). Skip it once, deliberately, with
+  `git commit --no-verify`.
+- **Before a release or a big UI change:** also run `bun run doctor` and the e2e suite on a device
+  (`bun run test:e2e:android`, and `test:e2e:ios` on macOS). They need a booted emulator or simulator, so the hook does
+  not run them.
+- **Want CI/CD?** That's your app's call. Ready-made GitHub Actions (checks on Linux/Windows/macOS, Android e2e on an
+  emulator, Dependabot) are in `examples/github-actions/`: copy them into `.github/` (see its README).
+- **CODEOWNERS** (`.github/CODEOWNERS`) is fully commented out: replace the placeholder owner, uncomment it and enable
+  "Require review from Code Owners" in branch protection.
 
 ## Keeping the template current
 
 - Expo SDK upgrades: the `sdk-upgrader` agent (uses the vendored `expo-upgrade` skill), then `bun run doctor`.
 - Vendored skills: refresh quarterly; steps in `.claude/skills/SOURCES.md`.
-- Docs drift: `bun run docs:check` (also in CI); the `docs-keeper` agent fixes it.
+- Docs drift: `bun run docs:check` (also in the pre-commit hook); the `docs-keeper` agent fixes it.
 - Apps created from this template don't receive later template changes automatically; port them by hand.
 
 MIT licensed (`LICENSE`). Credits and upstream notices: `THIRD_PARTY_NOTICES.md`.

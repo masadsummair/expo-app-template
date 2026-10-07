@@ -9,7 +9,6 @@ on:
     paths-ignore:
       - '**/*.md'
       - '.claude/**'
-      - '.github/copilot-instructions.md'
       - 'evals/**'
       - 'specs/**'
       - 'licenses/**'

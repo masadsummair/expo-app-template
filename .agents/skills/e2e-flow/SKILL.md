@@ -64,7 +64,7 @@ personal apps.
 
 ## Run locally
 
-Prerequisites: Node >=22.12 (the `e2e` engines field; CI uses Node 24); a dev build installed on the device
+Prerequisites: Node >=22.12 (the `e2e` engines field; `.node-version` pins 24); a dev build installed on the device
 (`bun run android`, or `bun run ios` on macOS; see `expo-dev-client`).
 
 | Host OS | iOS e2e | Android e2e |
@@ -85,7 +85,7 @@ bunx --no-install e2e list               # which tests would run, no device need
 
 - Metro: `e2e.config.ts` starts it, or reuses the one already running on :8081. Do not pass flags after `--` to a script; call `bunx --no-install e2e run ...` directly.
 - Telemetry is on by default upstream. The scripts and `.mcp.json` set `E2E_TELEMETRY_DISABLED=1`; export it when running `bunx e2e` by hand. Do not run `e2e feedback` (it sends data off the machine).
-- `release` mode (`E2E_BUILD=release`) is for CI: a release-style build with the bundle embedded, no Metro, no dev launcher. A dev build cannot run in CI.
+- `release` mode (`E2E_BUILD=release`) checks a release build: a release-style build with the bundle embedded, no Metro, no dev launcher. A dev build cannot run in CI.
 
 ## Check other device sizes (UI changes)
 
