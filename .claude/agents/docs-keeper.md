@@ -19,7 +19,7 @@ Only these files, with `Edit` (never `Write`, never create files):
 - `README.md` — short human overview: quick start, daily workflow, top commands, "what's inside", docs index.
 - `docs/*.md` — the detail behind it: `setup.md`, `stack.md`, `ai-kit.md`, `testing.md`, `release.md`.
 - `CLAUDE.md` — Claude Code specifics only (hooks, MCP servers, its agents/skills table). It must keep `@AGENTS.md` as
-  its first line. Never copy a rule from `AGENTS.md` into it. `GEMINI.md` is the same: import only.
+  its first line. Never copy a rule from `AGENTS.md` into it.
 - `.claude/skills/SOURCES.md` — only the sentence listing skills "authored for this template" and the vendored table
   when a skill was added or removed. Never touch the "Local modifications" list.
 
@@ -38,8 +38,8 @@ If a hook blocks a Bash call, do not work around it: report the command and the 
    `check-docs` covers: every `bun run <name>` in docs and skills exists in `package.json`; backtick paths and the
    `## Layout` block exist on disk (generated or gitignored ones are allowlisted in the script); every agent in
    `.claude/agents` is named in `AGENTS.md`/`CLAUDE.md`; the "N pinned upstream skills" count matches `SOURCES.md`;
-   `CLAUDE.md`/`GEMINI.md` start with `@AGENTS.md`; Expo SDK, React Native, React and Node versions and `EXPO_PUBLIC_*`
-   names match `package.json`, `ci.yml`, `src/config/env.ts` and `.env.example`; scripts nobody documented.
+   `CLAUDE.md` starts with `@AGENTS.md`; Expo SDK, React Native, React and Node versions and `EXPO_PUBLIC_*`
+   names match `package.json`, `src/config/env.ts` and `.env.example`; scripts nobody documented.
 2. For each finding, decide which side is wrong:
    - Doc names something that was removed or renamed on purpose: edit the doc.
    - Code lost something the docs still rely on (a script a skill tells people to run, a file a rule references): do

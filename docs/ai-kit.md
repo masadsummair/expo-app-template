@@ -1,7 +1,7 @@
 # AI kit
 
-The project rules live in `AGENTS.md`, the single source of truth. Edit that, not `CLAUDE.md` or `GEMINI.md`, which
-import it. Skills are authored in `.claude/skills/`; `.agents/skills/` is a generated copy for tools that scan that
+The project rules live in `AGENTS.md`, the single source of truth. Edit that, not `CLAUDE.md`, which
+imports it. Skills are authored in `.claude/skills/`; `.agents/skills/` is a generated copy for tools that scan that
 folder (`bun run skills:sync`).
 
 ## Tool support
@@ -10,14 +10,10 @@ folder (`bun run skills:sync`).
 |---|---|---|---|---|---|
 | Claude Code | `CLAUDE.md` → `AGENTS.md` | `.claude/skills` | `.claude/agents` | `.mcp.json` | hooks and permissions (enforced) |
 | Codex | `AGENTS.md` | `.agents/skills` | read the agent file as a checklist | `.codex/config.toml` (trusted project; `codex mcp login expo`) | none |
-| Cursor | `AGENTS.md` | `.claude/skills` and `.agents/skills` (listed twice; delete `.agents/` if Cursor-only) | reads `.claude/agents` | `.cursor/mcp.json` | `.cursorignore` (indexing only) |
-| Gemini CLI | `GEMINI.md` → `AGENTS.md` | `.agents/skills` | read the agent file as a checklist | `.gemini/settings.json` (trusted folder) | `.geminiignore` (`@` sharing only) |
-
-`.vscode/mcp.json` mirrors the MCP servers for VS Code.
 
 Only Claude Code enforces the hard rules (no `.env` reads, no npm/npx, no commits on `main`, no hand edits of `ios/` or
 `android/`). In other tools, keep the default approval mode, don't auto-run MCP tools or shell commands, and review
-diffs against `AGENTS.md`. The ignore files are best-effort: they don't cover Cursor's terminal or any tool's MCP calls.
+diffs against `AGENTS.md`.
 
 ## Building a feature with an agent
 
@@ -101,4 +97,3 @@ disabled on purpose: the vendored skills cost less context and carry no telemetr
 | `bun run lint:claude` | validates every skill and agent (frontmatter, names, descriptions, MCP tools), free |
 | `bun run docs:check` | fails when docs drift from the repo (scripts, paths, skill/agent lists, MCP configs) |
 | `bun run skills:sync` / `skills:check` | regenerate / verify the `.agents/skills` copy after editing `.claude/skills` |
-| `bun run evals:skills` | opt-in, paid: checks each skill triggers on the right requests (`evals/README.md`) |

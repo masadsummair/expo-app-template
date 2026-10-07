@@ -732,7 +732,6 @@ describe('guard-files', () => {
     ['ask', 'Edit', '.claude/settings.json', 'x'],
     ['ask', 'Write', '.claude/settings.local.json', 'x'],
     ['ask', 'Edit', 'e2e.config.ts', 'x'],
-    ['ask', 'Edit', '.cursor/mcp.json', 'x'],
     ['ask', 'Edit', '.mcp.json', 'x'],
     ['ask', 'Edit', 'package.json', 'x'],
     ['ask', 'Edit', 'bun.lock', 'x'],
@@ -742,7 +741,6 @@ describe('guard-files', () => {
     ['ask', 'Edit', 'app.config.ts', 'x'],
     ['ask', 'Edit', 'eas.json', 'x'],
     ['ask', 'Write', 'scripts/rename.ts', 'x'],
-    ['ask', 'Write', 'evals/run.ts', 'x'],
     ['ask', 'Write', '.github/workflows/ci.yml', 'x'],
     ['ask', 'Write', '.git/hooks/pre-commit', 'x'],
     ['ask', 'Edit', '.claude/skills/new-screen/SKILL.md', 'x'],
@@ -761,15 +759,12 @@ describe('guard-files', () => {
     ['ask', 'Edit', '.Claude/Skills/x/SKILL.md', 'x'],
     ['ask', 'Edit', '.Claude/Agents/x.md', 'x'],
     ['ask', 'Edit', '.MCP.json', 'x'],
-    ['ask', 'Edit', '.CURSOR/mcp.json', 'x'],
     ['ask', 'Edit', 'E2E.Config.ts', 'x'],
     // tool configs and scaffolding that other tools load or execute
     ['ask', 'Edit', '.vscode/tasks.json', 'x'],
     ['ask', 'Edit', '.VSCODE/tasks.json', 'x'],
     ['ask', 'Write', '.vscode/mcp.json', 'x'],
     ['ask', 'Write', '.codex/config.toml', 'x'],
-    ['ask', 'Write', '.gemini/settings.json', 'x'],
-    ['ask', 'Write', '.Cursor/rules/x.mdc', 'x'],
     ['ask', 'Edit', 'bunfig.toml', 'x'],
     ['ask', 'Edit', 'Bunfig.toml', 'x'],
     ['ask', 'Write', '.npmrc', 'x'],
@@ -786,10 +781,7 @@ describe('guard-files', () => {
     ['ask', 'Write', '.claude/output-styles/x.md', 'x'],
     ['ask', 'Write', '.agents/skills/x/SKILL.md', 'x'],
     ['ask', 'Edit', 'CLAUDE.md', 'x'],
-    ['ask', 'Edit', 'GEMINI.md', 'x'],
     ['ask', 'Edit', 'claude.md', 'x'],
-    ['ask', 'Edit', '.cursorignore', 'x'],
-    ['ask', 'Edit', '.geminiignore', 'x'],
     ['ask', 'Edit', '.fingerprintignore', 'x'],
     ['ask', 'Write', '.husky/pre-commit', 'x'],
     ['ask', 'Write', '.githooks/pre-commit', 'x'],
@@ -886,7 +878,6 @@ describe('Windows paths', () => {
     expect(win('write', 'C:\\Users\\me\\proj\\src\\app\\index.tsx')).toBe('allow');
     expect(win('write', 'C:\\Users\\me\\proj\\CLAUDE.md.')).toBe('ask');
     expect(win('write', 'C:\\Users\\me\\proj\\CLAUDE.md::$DATA')).toBe('ask');
-    expect(win('write', 'C:\\Users\\me\\proj\\.cursorignore ')).toBe('ask');
     expect(win('write', 'C:\\Users\\me\\proj\\.claude.\\settings.json')).toBe('ask');
     expect(win('write', 'C:\\Users\\me\\proj\\CLAUDE~1.MD')).toBe('ask');
     expect(win('write', 'C:\\Users\\me\\proj\\ios.\\Podfile')).toBe('deny');

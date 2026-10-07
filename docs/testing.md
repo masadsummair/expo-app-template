@@ -11,8 +11,7 @@ There's no CI/CD on GitHub: checks run on your machine.
   once, deliberately, with `git commit --no-verify`.
 - **Before a release or a big UI change:** also run `bun run doctor` and the e2e suite on a device. They need a booted
   emulator or simulator, so the hook doesn't run them.
-- **Want CI/CD?** That's your app's call. Ready-made GitHub Actions (checks on Linux, Windows and macOS, Android e2e on
-  an emulator, Dependabot) are in `examples/github-actions/`: copy them into `.github/` (see its README).
+- **CI/CD:** the template ships none; checks run locally through the pre-commit hook. Add your own if you want it.
 
 Other checks you can run on their own:
 

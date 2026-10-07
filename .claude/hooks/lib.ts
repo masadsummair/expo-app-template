@@ -87,13 +87,13 @@ const ENV_MESSAGE = (rel: string) =>
 
 // Case-insensitive on purpose: macOS and Windows file systems treat `Package.json` and `package.json` as one file.
 const EXECUTED_BY_AUTO_APPROVED =
-  /^(package\.json|bun\.lock|jest\.config\.js|eslint\.config\.js|metro\.config\.js|babel\.config\.js|app\.config\.ts|eas\.json|scripts|evals|\.github|\.git\/hooks|\.claude\/(agents|skills))(\/|$)/i;
+  /^(package\.json|bun\.lock|jest\.config\.js|eslint\.config\.js|metro\.config\.js|babel\.config\.js|app\.config\.ts|eas\.json|scripts|\.github|\.git\/hooks|\.claude\/(agents|skills))(\/|$)/i;
 // Tool configs and test scaffolding that other agents' tools, installs or the test runner load and execute.
-const TOOL_CONFIG = /^(\.(vscode|codex|gemini|cursor)|e2e)(\/|$)|^test\/setup\.ts$|(^|\/)(bunfig\.toml|\.npmrc|tsconfig[^/]*\.json)$/i;
+const TOOL_CONFIG = /^(\.(vscode|codex)|e2e)(\/|$)|^test\/setup\.ts$|(^|\/)(bunfig\.toml|\.npmrc|tsconfig[^/]*\.json)$/i;
 
-// Slash commands carry allowed-tools and shell injection; the ignore files are the secret-hiding control for Cursor and Gemini.
+// Slash commands carry allowed-tools and shell injection; they are never edited silently.
 const AGENT_CONTROL =
-  /^(\.claude|\.agents|\.husky|\.githooks)(\/|$)|^(claude\.md|gemini\.md|\.cursorignore|\.geminiignore|\.fingerprintignore|\.?lefthook(-local)?\.ya?ml)$/i;
+  /^(\.claude|\.agents|\.husky|\.githooks)(\/|$)|^(claude\.md|\.fingerprintignore|\.?lefthook(-local)?\.ya?ml)$/i;
 
 /** Decision for touching `path`. `read` only checks secrets; `write` also checks protected files. */
 export function classifyPath(access: 'read' | 'write', path: string, root: string): Decision | null {
@@ -114,7 +114,7 @@ export function classifyPath(access: 'read' | 'write', path: string, root: strin
     return { decision: 'ask', reason: `${label} looks like a Windows 8.3 short name, which can alias a protected file. Use the long name.` };
   }
   // The agent must not silently rewrite its own guardrails or permissions.
-  if (/^\.claude\/(hooks(\/|$)|settings)/i.test(rel) || rel.toLowerCase() === '.mcp.json' || /^\.cursor\//i.test(rel)) {
+  if (/^\.claude\/(hooks(\/|$)|settings)/i.test(rel) || rel.toLowerCase() === '.mcp.json') {
     return { decision: 'ask', reason: `Editing ${rel} changes an agent's own hooks, permissions, or MCP servers. Confirm this is intended.` };
   }
   // e2e.config.ts spawns processes (app.command) whenever e2e runs: treat it like executable config.
@@ -128,7 +128,7 @@ export function classifyPath(access: 'read' | 'write', path: string, root: strin
     return { decision: 'ask', reason: `${rel} configures tools, installs or tests that run with auto-approved commands or other agents. Confirm this edit is intended.` };
   }
   if (AGENT_CONTROL.test(rel)) {
-    return { decision: 'ask', reason: `${rel} steers other agents or hides secrets from them (commands, rules, instructions, ignore files, git hooks). Confirm this edit is intended.` };
+    return { decision: 'ask', reason: `${rel} steers other agents (commands, rules, instructions, hooks). Confirm this edit is intended.` };
   }
   return null;
 }

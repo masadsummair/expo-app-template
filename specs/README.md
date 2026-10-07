@@ -9,8 +9,7 @@ out of scope, and the acceptance criteria that tests must prove.
 - `bun run specs:check <slug>` fails when a criterion has no e2e test titled `AC-<n>:` under `e2e/`.
 - Keep the spec current: update `Status` and the criteria table when the plan changes. A stale spec
   misleads the next session.
-- `example-profile-edit.md` shows a filled-in spec. Copy its shape, not its content. It has no e2e tests, so
-  `bun run specs:check example-profile-edit` prints `0/3 criteria covered` and exits 1: that is expected, and you can delete the file.
+- `_template.md` is the shape to copy for a new spec.
 
 Start a feature with `/new-feature <description>` in Claude Code. In other tools, ask the agent to read
 `.claude/skills/new-feature/SKILL.md` and follow it. Specs for finished features can stay as history or be

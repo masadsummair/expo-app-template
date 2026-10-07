@@ -83,7 +83,6 @@
     "docs:check": "bun scripts/check-docs.ts",
     "contrast:check": "bun scripts/check-contrast.ts",
     "privacy:check": "bun scripts/check-privacy-manifest.ts",
-    "evals:skills": "bun evals/run-skill-evals.ts",
     "rename": "bun scripts/rename.ts",
     "skills:sync": "bun scripts/sync-agent-skills.ts",
     "skills:check": "bun scripts/sync-agent-skills.ts --check",

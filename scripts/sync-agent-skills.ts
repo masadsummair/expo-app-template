@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Copies .claude/skills to .agents/skills, the folder Codex and Gemini CLI scan for skills.
+ * Copies .claude/skills to .agents/skills, the folder Codex scans for skills.
  * A copy, not a symlink: symlinks need elevated rights or Developer Mode on Windows.
  * Usage: bun scripts/sync-agent-skills.ts [--check] [repoRoot]
  *   (no flag)  rewrite .agents/skills from .claude/skills
@@ -17,13 +17,12 @@ const dest = join(root, ".agents", "skills");
 
 const README = `# Generated, do not edit
 
-This folder is a copy of \`.claude/skills/\`, made for Codex and Gemini CLI, which scan
+This folder is a copy of \`.claude/skills/\`, made for Codex, which scans
 \`.agents/skills/\` and not \`.claude/skills/\`. Edit the skills in \`.claude/skills/\`, then run:
 
     bun run skills:sync
 
-\`bun run verify\` fails when this copy has drifted. Cursor reads both folders, so it lists each
-skill twice; delete \`.agents/\` if you only use Cursor and Claude Code.
+\`bun run verify\` fails when this copy has drifted.
 `;
 
 /** Relative POSIX-style path -> bytes, for every file under dir (skips OS junk files). */

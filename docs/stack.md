@@ -84,7 +84,5 @@
 | Tool | What it does here |
 |---|---|
 | bun | package manager and script runner (never npm, yarn or pnpm) |
-| Evals (`evals/`) | opt-in, paid checks that each skill triggers on the right requests |
 | git pre-commit hook (`.githooks/pre-commit`) | runs `bun run verify` before every commit; turned on by `bun install` |
-| `examples/github-actions/` | optional CI (checks, Android e2e, Dependabot) to copy into `.github/` |
 | `.gitattributes` · `.editorconfig` | LF line endings, so Windows checkouts don't break scripts |
