@@ -78,7 +78,7 @@ export function selectModelProvider(): Selection {
   }
   return {
     provider: undefined,
-    reason: 'no model: set ANTHROPIC_API_KEY or run `bunx --no-install e2e login <provider>` (see README)',
+    reason: 'no model: set ANTHROPIC_API_KEY or run `bunx --no-install e2e login <provider>` (see docs/testing.md)',
   };
 }
 

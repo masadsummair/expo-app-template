@@ -55,7 +55,7 @@ const agents: { agents?: E2EConfig['agents'] } = selected.provider
         default: {
           model: await createModel(selected.provider),
           system: 'You are a QA agent for a mobile app. Verify every outcome on screen before you finish.',
-          // Describes the placeholder Sign in and Home screens; update it when you replace them (see README step 6).
+          // Describes the placeholder Sign in and Home screens; update it when you replace them (see docs/setup.md step 6).
           context: 'Screens: Sign in (email, password, Sign in button), then Home (Sign out button).',
           maxSteps: 12,
           maxModelCalls: 12,
