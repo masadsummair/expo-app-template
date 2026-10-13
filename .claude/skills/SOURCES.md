@@ -3,7 +3,7 @@
 Third-party skills copied into this template at a pinned commit. Licenses are in `THIRD_PARTY/` (plus
 `expo-animation/LICENSE`, which ships with the upstream skill); see `THIRD_PARTY_NOTICES.md`.
 Everything not listed here (`new-screen`, `new-component`, `api-endpoint`, `e2e-flow`, `new-feature`,
-`add-form`, `add-store`, `release`, `env-secrets`, `deep-links`, `push-notifications`, `verify`, `ship`)
+`add-form`, `add-store`, `release`, `env-secrets`, `deep-links`, `push-notifications`, `verify`, `ship`, `research`, `slop-review`, `adversarial-review`)
 is authored for this template.
 
 Referenced, not vendored: `e2e` (tester-army/e2e) 0.17.0 and `@e2e-dev/mobile` 0.9.2 (Apache-2.0) are pinned

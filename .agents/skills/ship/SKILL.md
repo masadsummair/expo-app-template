@@ -14,11 +14,16 @@ silence or "continue" is not approval.
    `<type>/<short-slug>` from the change (`git switch -c feat/profile-edit`).
 2. **Verify.** Run the commands in `.claude/skills/verify/SKILL.md` (read the file; `verify` is user-invoked only, so
    do not use the Skill tool) and paste its table. Any ❌ → stop and report.
-3. **Review.** Run the `rn-reviewer` agent on the diff (give it the base branch, what the change does, and any
-   constraint agreed in conversation). Also run:
+3. **Review.** Both reviews are required and must have run on the current diff; an edit after a review makes it stale.
+   - `slop-reviewer` on the diff;
+   - `adversarial-reviewer` with the base branch, the spec path and AC list (if any), and any constraint agreed in
+     conversation.
+   A report that does not end with `REVIEW-COMPLETE` did not finish: re-run it, at most twice. Also run:
    - `mobile-security-auditor` if auth, tokens, storage, deep links, env, network or permissions changed;
    - `a11y-auditor` if screens or components changed.
-   Fix every BLOCKING / BLOCK finding, then re-run `bun run verify`.
+   Fix every BLOCKING / BLOCK finding, re-run `bun run verify`, and re-run both reviewers if anything in the diff
+   changed. If a report still does not end with `REVIEW-COMPLETE` after two re-runs, or BLOCKING findings remain
+   after 3 review rounds, stop and report to the user.
 4. **Summarise and STOP (approval 1).** Show `git status --short` and the exact list of paths you will stage. Flag
    untracked files, `.e2e/` output, keystores and credential files (`*.jks`, `*.keystore`, `google-services.json`,
    service-account JSON): none of them are staged. Also show what each reviewer found and what was fixed, and the

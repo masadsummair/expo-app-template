@@ -9,4 +9,4 @@ All project rules live in `AGENTS.md`. This file holds only what applies to Clau
   - `e2e` (tester-army/e2e) drives the emulator or simulator with no model key: open a session, observe, tap, type, then encode the journey as a test in `e2e/`. On Windows it needs WSL2.
   - `expo` is Expo's hosted docs and EAS server (needs an Expo login).
 - Claude-only slash skills: `/new-feature` (one feature end to end: spec, plan, code, tests, review, device check), `/verify` (every check), `/ship` (take finished work to a PR with two approval stops).
-- Subagents live in `.claude/agents/`; when to dispatch each is in `docs/ai-kit.md`. Run `rn-reviewer` before opening a PR.
+- Subagents live in `.claude/agents/`; when to dispatch each is in `docs/ai-kit.md`.

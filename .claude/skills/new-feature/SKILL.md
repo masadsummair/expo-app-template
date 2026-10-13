@@ -19,12 +19,18 @@ scope growth). **Never run `git commit` or `git push`** — hand off at the end.
       (AskUserQuestion) for: goal, who uses it, screens, data, edge cases, out of scope.
 - [ ] Write `specs/<kebab-slug>.md` from `specs/_template.md`. Every acceptance criterion gets an ID
       (`AC-1`...) in Given/When/Then form that a user could observe, plus the testIDs it touches.
+- [ ] Read `docs/standards.md`. In the spec's `## Standards` section list each rule the feature touches as
+      `[rule.id]` with one line on how the plan complies, or write `none`.
 - [ ] Show the spec. **Wait for explicit approval** before writing code.
 
 ## 2. Plan
 
 - [ ] List the files to create/modify and what is out of scope (3+ files: state it and wait for a yes).
 - [ ] Read the code you will touch (`src/app`, `src/components/ui`, `src/services/api`, `src/stores`).
+- [ ] Look for a pattern doc that fits the need (`docs/patterns/`, when it exists) and suggest it to the user before
+      writing new code. A pattern is applied only when the user picks it.
+- [ ] A new dependency needs an approved `research` intake record first. If the feature is optional, say so and propose
+      a pattern doc instead of core code.
 - [ ] Mark the Status line in the spec `in progress`.
 
 ## 3. Implement (reuse the project skills, in this order)
@@ -37,8 +43,9 @@ scope growth). **Never run `git commit` or `git push`** — hand off at the end.
 | Route | `new-screen` (all four states, testIDs) |
 | Reusable UI | `new-component` |
 
-Rules from `AGENTS.md` apply: semantic tokens, no manual memoisation, no `fetch` outside `client.ts`,
-no secrets in `EXPO_PUBLIC_*`, tokens only in SecureStore.
+Rules from `AGENTS.md` and `docs/standards.md` apply: semantic tokens, no manual memoisation, no `fetch` outside `client.ts`,
+no secrets in `EXPO_PUBLIC_*`, tokens only in SecureStore or in storage encrypted with a SecureStore key
+(never plain MMKV).
 
 ## 4. Tests
 
@@ -72,10 +79,12 @@ no secrets in `EXPO_PUBLIC_*`, tokens only in SecureStore.
 
 ## 6. Review (fresh context, as subagents)
 
-Subagents do not see this conversation. Give each a self-contained prompt: spec path, base branch,
-the AC list, and "report only correctness gaps or violated requirements, not style".
+Subagents do not see this conversation. Give each a self-contained prompt: spec path, base branch and
+the AC list. A report that does not end with `REVIEW-COMPLETE` did not finish: run it again (at most twice, as in `ship`).
 
-- [ ] `rn-reviewer` on the diff against the spec. Fix real findings; list rejected ones with a reason.
+- [ ] `slop-reviewer` on the diff.
+- [ ] `adversarial-reviewer` on the diff, with the spec path, the AC list and every constraint agreed in this
+      conversation. Fix real findings; list rejected ones with a reason.
 - [ ] `mobile-security-auditor` **only** if auth, storage, network, deep links or secrets changed.
 - [ ] Re-run `bun run verify` if code changed.
 

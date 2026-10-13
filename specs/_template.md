@@ -11,6 +11,10 @@ One or two sentences: what the user can do afterwards that they could not before
 
 - Things a reviewer might expect but that this feature deliberately does not do.
 
+## Standards
+
+- `[rule.id]` from `docs/standards.md` that this feature touches, and how it complies. "None" is a valid answer.
+
 ## Screens / routes
 
 | Route | New or changed | Purpose |
