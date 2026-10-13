@@ -13,6 +13,8 @@ try {
   if (typeof mod.main !== 'function') throw new Error('guard does not export main()');
   await mod.main();
 } catch (error) {
-  process.stderr.write(`Claude Code hook "${name}" could not run, blocking: ${error instanceof Error ? error.message : String(error)}\n`);
+  process.stderr.write(
+    `Claude Code hook "${name}" could not run, blocking: ${error instanceof Error ? error.message : String(error)}\n`,
+  );
   process.exit(2);
 }

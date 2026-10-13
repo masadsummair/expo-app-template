@@ -42,13 +42,19 @@ function findManifests(dir: string, depth = 0, out: string[] = []): string[] {
 const declared = new Map<string, Map<string, Set<string>>>();
 for (const file of findManifests(join(root, 'node_modules'))) {
   const xml = readFileSync(file, 'utf8');
-  const pkg = file.split('node_modules/').pop()!.split('/').slice(0, file.includes('node_modules/@') ? 2 : 1).join('/');
+  const pkg = file
+    .split('node_modules/')
+    .pop()!
+    .split('/')
+    .slice(0, file.includes('node_modules/@') ? 2 : 1)
+    .join('/');
   const re =
     /<key>NSPrivacyAccessedAPIType<\/key>\s*<string>([^<]+)<\/string>\s*<key>NSPrivacyAccessedAPITypeReasons<\/key>\s*<array>([\s\S]*?)<\/array>/g;
   for (const m of xml.matchAll(re)) {
     const reasons = [...m[2]!.matchAll(/<string>([^<]+)<\/string>/g)].map((r) => r[1]!);
     const byReason = declared.get(m[1]!) ?? new Map<string, Set<string>>();
-    for (const reason of reasons) byReason.set(reason, (byReason.get(reason) ?? new Set()).add(pkg));
+    for (const reason of reasons)
+      byReason.set(reason, (byReason.get(reason) ?? new Set()).add(pkg));
     declared.set(m[1]!, byReason);
   }
 }
@@ -72,5 +78,7 @@ for (const [category, reasons] of declared) {
   }
 }
 
-console.log(`check-privacy-manifest: ${declared.size} API categories declared by dependencies, ${missing} missing`);
+console.log(
+  `check-privacy-manifest: ${declared.size} API categories declared by dependencies, ${missing} missing`,
+);
 process.exit(missing ? 1 : 0);

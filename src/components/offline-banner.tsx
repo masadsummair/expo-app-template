@@ -35,7 +35,11 @@ export function OfflineBanner({ onHeightChange }: { onHeightChange: (height: num
       className="bg-warning pt-2"
       style={{ paddingBottom: bottom + 8, paddingLeft: left + 16, paddingRight: right + 16 }}
     >
-      <Text variant="caption" className="text-center text-background" accessibilityLiveRegion="polite">
+      <Text
+        variant="caption"
+        className="text-center text-background"
+        accessibilityLiveRegion="polite"
+      >
         {MESSAGE}
       </Text>
     </View>

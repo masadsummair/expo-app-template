@@ -9,7 +9,6 @@ import { useUpdateCheck } from './use-update-check';
 
 let appState: ((s: string) => void) | null = null;
 
-
 jest.mock('expo-updates', () => ({
   isEnabled: true,
   checkForUpdateAsync: jest.fn(),
@@ -26,7 +25,10 @@ beforeEach(() => {
   flags.__DEV__ = false;
   jest.useFakeTimers();
   jest.setSystemTime(new Date('2026-01-01T00:00:00Z'));
-  jest.spyOn(AppState, 'addEventListener').mockImplementation(((_: string, l: (s: string) => void) => {
+  jest.spyOn(AppState, 'addEventListener').mockImplementation(((
+    _: string,
+    l: (s: string) => void,
+  ) => {
     appState = l;
     return { remove: jest.fn() };
   }) as never);

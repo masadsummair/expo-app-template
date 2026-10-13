@@ -2,13 +2,13 @@
 
 ## Release and ops
 
-| Need | Use |
-|---|---|
-| Build, submit, OTA update or rollback, version bumps | the `release` skill. Its fingerprint gate refuses an OTA update when native code changed. |
-| Add an environment variable with the right EAS visibility | the `env-secrets` skill |
-| Deep links | the `deep-links` skill |
-| Push notifications | the `push-notifications` skill (needs `bunx expo install expo-notifications`, `EAS_PROJECT_ID`, FCM/APNs credentials and a new native build) |
-| Move to a newer Expo SDK | the `sdk-upgrader` agent |
+| Need                                                      | Use                                                                                                                                          |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build, submit, OTA update or rollback, version bumps      | the `release` skill. Its fingerprint gate refuses an OTA update when native code changed.                                                    |
+| Add an environment variable with the right EAS visibility | the `env-secrets` skill                                                                                                                      |
+| Deep links                                                | the `deep-links` skill                                                                                                                       |
+| Push notifications                                        | the `push-notifications` skill (needs `bunx expo install expo-notifications`, `EAS_PROJECT_ID`, FCM/APNs credentials and a new native build) |
+| Move to a newer Expo SDK                                  | the `sdk-upgrader` agent                                                                                                                     |
 
 Run the EAS CLI as `bun run eas <command>`; it's pinned to one version. Production-affecting EAS commands are never
 pre-approved and always prompt. Android release builds are minified with R8: re-run the release e2e

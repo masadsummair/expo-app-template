@@ -38,7 +38,7 @@ conventions, the run commands and the known upstream issues.
    Dismiss the one-time dev-menu sheet by locating and tapping "Continue"; use `back` only if "Fast Refresh" is in the
    observation (the full menu is open). On iOS the dev-client handshake comes from `launchArguments` in `e2e.config.ts`.
 2. `observe`, then act with `call {tool: tap|type|scroll|back|observe|locate|screenshot|type_secret|start_recording,
-   args: {...}}`, for example `locate` with args `{testId: "sign-in-submit"}` to confirm a control resolves to exactly
+args: {...}}`, for example `locate` with args `{testId: "sign-in-submit"}` to confirm a control resolves to exactly
    one node. Node ids are valid only for the newest observation.
 3. Re-`observe` after each action and compare with the acceptance criteria. Record observed vs expected.
 4. Cover the happy path, one error or empty state, and back navigation. Check light and dark mode if the change is visual.

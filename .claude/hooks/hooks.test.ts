@@ -1,7 +1,14 @@
 // Regression tests for the Claude Code hooks in this folder. Run: bun run test:hooks
 import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { evaluateBash, type Ctx } from './guard-bash';
@@ -9,17 +16,24 @@ import { evaluateFileTool } from './guard-files';
 import { classifyPath, relativeToRoot } from './lib';
 
 const ROOT = resolve(import.meta.dir, '../..');
-const ctx = (branch = 'feat/x'): Ctx => ({ root: ROOT, cwd: ROOT, home: '/home/dev', branch: () => branch });
+const ctx = (branch = 'feat/x'): Ctx => ({
+  root: ROOT,
+  cwd: ROOT,
+  home: '/home/dev',
+  branch: () => branch,
+});
 
 type Want = 'deny' | 'ask' | 'allow';
-const bash = (command: string, branch?: string): Want => evaluateBash(command, ctx(branch))?.decision ?? 'allow';
+const bash = (command: string, branch?: string): Want =>
+  evaluateBash(command, ctx(branch))?.decision ?? 'allow';
 const files = (tool: string, tool_input: Record<string, unknown>): Want =>
   evaluateFileTool({ tool_name: tool, tool_input }, ROOT)?.decision ?? 'allow';
 const fileOp = (tool: string, rel: string, content?: string): Want =>
   files(tool, { file_path: join(ROOT, rel), content, new_string: content });
 
 function table(rows: [Want, string][]) {
-  for (const [want, command] of rows) test(`${want}: ${command}`, () => expect(bash(command)).toBe(want));
+  for (const [want, command] of rows)
+    test(`${want}: ${command}`, () => expect(bash(command)).toBe(want));
 }
 
 describe('guard-bash: package manager', () => {
@@ -95,11 +109,45 @@ describe('guard-bash: git', () => {
     expect(bash('git commit -m x', '')).toBe('allow');
   });
 
+  test('commit cannot skip the pre-commit hook', () => {
+    for (const command of [
+      'git commit --no-verify -m x',
+      'git commit -m x --no-verify',
+      'git commit --no-ver -m x',
+      'git commit -n -m x',
+      'git commit -nm x',
+      'git commit -anm x',
+      'git -C . commit -n -m x',
+      'git commit -m x && git commit --amend -n',
+    ]) {
+      expect(bash(command)).toBe('deny');
+    }
+  });
+
+  test('flag lookalikes are not hook skips, and -n on push is a dry run', () => {
+    for (const command of [
+      'git commit -m x',
+      'git commit -am "fix: -n flag"',
+      'git commit -m -n',
+      'git commit -m x -- -n',
+      'git commit --amend --no-edit',
+      'git commit -uno -m x',
+      'git status -n',
+    ]) {
+      expect(bash(command)).toBe('allow');
+    }
+    expect(bash(`git ${push} -n origin feat/x`)).toBe('ask');
+  });
+
   test('commit message text is not scanned for secrets or commands', () => {
     expect(bash('git commit -m "docs: explain .env handling"')).toBe('allow');
     expect(bash("git commit -am 'chore: stop using npm install and .npmrc'")).toBe('allow');
     expect(bash('git commit -m "x" --message=".env"')).toBe('allow');
-    expect(bash('git commit -m "$(cat <<\'EOF\'\nfix: don\'t run npm install\n\nbody mentions .env and npx\nEOF\n)"')).toBe('allow');
+    expect(
+      bash(
+        "git commit -m \"$(cat <<'EOF'\nfix: don't run npm install\n\nbody mentions .env and npx\nEOF\n)\"",
+      ),
+    ).toBe('allow');
     expect(bash('gh pr create --title "t" --body "see .env.example and .env docs"')).toBe('allow');
   });
 });
@@ -158,14 +206,14 @@ describe('guard-bash: secrets', () => {
     ['deny', 'tee .env < /dev/null'],
     ['deny', 'cat $(cat .env)'],
     ['deny', 'bash -c "cat .env"'],
-    ['deny', 'sh -c \'cat .env\''],
+    ['deny', "sh -c 'cat .env'"],
     ['deny', 'xargs cat < .env'],
     ['deny', 'cat src/../.env'],
     ['deny', 'cat -- .env'],
     ['deny', 'head --file=.env'],
     ['deny', 'grep KEY .env'],
     ['deny', 'grep -rn "\\.env" AGENTS.md .env'],
-    ['deny', 'bun -e "console.log(require(\'fs\').readFileSync(\'.env\'))"'],
+    ['deny', "bun -e \"console.log(require('fs').readFileSync('.env'))\""],
     ['deny', 'type .env'],
     ['deny', 'Get-Content .env'],
     ['deny', 'Get-Content -Path .\\.env'],
@@ -277,9 +325,28 @@ describe('guard-bash: code-loading flags on jest, eslint and bun test', () => {
     ['allow', 'bun run test src/lib/storage.test.ts'],
     ['allow', 'bun run test --watchAll=false --coverage'],
     ['allow', 'bun run test -t "sign in"'],
-    ['allow', 'bunx expo lint src'],
-    ['allow', 'bunx expo lint --fix src/app'],
+    ['allow', 'bunx eslint src'],
+    ['allow', 'bunx eslint --fix src/app'],
     ['allow', 'bun run test:hooks'],
+  ]);
+});
+
+describe('guard-bash: eslint flags that download packages or load another config', () => {
+  table([
+    ['deny', 'bunx eslint --init'],
+    ['deny', 'bunx eslint src --mcp'],
+    ['deny', 'bunx eslint --inspect-config'],
+    ['deny', 'bunx eslint --flag v10_config_lookup_from_file src/a.ts'],
+    ['deny', 'bunx eslint --flag=unstable_config_lookup_from_file src'],
+    ['deny', 'bun run lint -- --inspect-config'],
+    ['deny', 'ESLINT_FLAGS=v10_config_lookup_from_file bun run lint'],
+    // ESLint 9 then loads a legacy .eslintrc.*, which runs code
+    ['deny', 'ESLINT_USE_FLAT_CONFIG=false bun run lint'],
+    ['deny', 'export ESLINT_USE_FLAT_CONFIG=false; bun run lint'],
+    ['deny', 'env ESLINT_USE_FLAT_CONFIG=false bun run lint'],
+    ['allow', 'bunx eslint src'],
+    ['allow', 'bunx eslint --fix src/app'],
+    ['allow', 'bunx eslint -f json src'],
   ]);
 });
 
@@ -396,11 +463,17 @@ describe('guard-bash: credential files', () => {
   ]);
 
   test('every Read deny in settings.json is also blocked in Bash', () => {
-    const { permissions } = JSON.parse(readFileSync(join(ROOT, '.claude/settings.json'), 'utf8')) as { permissions: { deny: string[] } };
+    const { permissions } = JSON.parse(
+      readFileSync(join(ROOT, '.claude/settings.json'), 'utf8'),
+    ) as { permissions: { deny: string[] } };
     const reads = permissions.deny.flatMap((r) => /^Read\((.+)\)$/.exec(r)?.[1] ?? []);
     expect(reads.length).toBeGreaterThan(10);
     for (const pattern of reads) {
-      const sample = pattern.replace(/^\.\//, '').replace(/\*\*\//g, '').replace(/\/\*\*$/, '/x').replace(/\*/g, 'x');
+      const sample = pattern
+        .replace(/^\.\//, '')
+        .replace(/\*\*\//g, '')
+        .replace(/\/\*\*$/, '/x')
+        .replace(/\*/g, 'x');
       expect(`${sample}: ${bash(`cat "${sample}"`)}`).toBe(`${sample}: deny`);
     }
   });
@@ -532,11 +605,16 @@ describe('guard-bash: protected branch in a real repo', () => {
         root: ROOT,
         cwd: dir,
         home: '/home/dev',
-        branch: (d) => spawnSync('git', ['-C', d, 'branch', '--show-current'], { encoding: 'utf8' }).stdout.trim(),
+        branch: (d) =>
+          spawnSync('git', ['-C', d, 'branch', '--show-current'], {
+            encoding: 'utf8',
+          }).stdout.trim(),
       };
       expect(evaluateBash('git commit -m x', real)?.decision).toBe('deny');
       expect(evaluateBash('git -c user.name=x commit -m x', real)?.decision).toBe('deny');
-      expect(evaluateBash(`git -C ${dir} commit -m x`, { ...real, cwd: ROOT })?.decision).toBe('deny');
+      expect(evaluateBash(`git -C ${dir} commit -m x`, { ...real, cwd: ROOT })?.decision).toBe(
+        'deny',
+      );
       git('switch', '-q', '-c', 'feat/x');
       expect(evaluateBash('git commit -m x', real)).toBeNull();
     } finally {
@@ -736,8 +814,26 @@ describe('guard-files', () => {
     ['ask', 'Edit', 'package.json', 'x'],
     ['ask', 'Edit', 'bun.lock', 'x'],
     ['ask', 'Edit', 'jest.config.js', 'x'],
+    ['ask', 'Edit', 'eslint.config.ts', 'x'],
     ['ask', 'Edit', 'eslint.config.js', 'x'],
+    ['ask', 'Edit', 'eslint.config.mjs', 'x'],
+    ['ask', 'Edit', '.prettierignore', 'x'],
     ['ask', 'Edit', 'metro.config.js', 'x'],
+    ['ask', 'Edit', '.prettierrc', 'x'],
+    // ESLint and Prettier configs load at any depth, so a nested one runs or reformats too
+    ['ask', 'Write', 'src/eslint.config.js', 'x'],
+    ['ask', 'Write', 'src/sub/eslint.config.mjs', 'x'],
+    ['ask', 'Write', '.prettierrc.js', 'x'],
+    ['ask', 'Write', 'src/.prettierrc.json', 'x'],
+    ['ask', 'Write', 'src/prettier.config.js', 'x'],
+    ['ask', 'Write', 'prettier.config.mjs', 'x'],
+    ['ask', 'Write', '.editorconfig', 'x'],
+    ['ask', 'Write', '.eslintrc.cjs', 'x'],
+    ['ask', 'Write', 'src/.eslintrc.js', 'x'],
+    ['ask', 'Write', '.eslintrc', 'x'],
+    // `bun run <script>` uses the nearest package.json, so a nested one can define what `bun run lint` runs
+    ['ask', 'Write', 'src/package.json', 'x'],
+    ['ask', 'Write', 'src/sub/package.json', 'x'],
     ['ask', 'Edit', 'app.config.ts', 'x'],
     ['ask', 'Edit', 'eas.json', 'x'],
     ['ask', 'Write', 'scripts/rename.ts', 'x'],
@@ -749,7 +845,7 @@ describe('guard-files', () => {
     ['ask', 'Edit', 'Package.json', 'x'],
     ['ask', 'Edit', 'PACKAGE.JSON', 'x'],
     ['ask', 'Edit', 'Bun.lock', 'x'],
-    ['ask', 'Edit', 'ESLint.config.js', 'x'],
+    ['ask', 'Edit', 'ESLint.config.ts', 'x'],
     ['ask', 'Edit', 'EAS.json', 'x'],
     ['ask', 'Write', 'Scripts/x.ts', 'x'],
     ['ask', 'Write', '.GitHub/workflows/ci.yml', 'x'],
@@ -821,7 +917,8 @@ describe('guard-files', () => {
     ['allow', 'Write', 'src/config/x.ts', 'process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY'],
   ];
   for (const [want, tool, rel, content] of cases) {
-    test(`${want}: ${tool} ${rel}${content ? ` (${content})` : ''}`, () => expect(fileOp(tool, rel, content)).toBe(want));
+    test(`${want}: ${tool} ${rel}${content ? ` (${content})` : ''}`, () =>
+      expect(fileOp(tool, rel, content)).toBe(want));
   }
 
   test('Grep: .env path or glob is denied, a directory is not', () => {
@@ -844,8 +941,15 @@ describe('guard-files', () => {
   });
 
   test('NotebookEdit and MultiEdit are checked', () => {
-    expect(files('NotebookEdit', { notebook_path: join(ROOT, 'ios/x.ipynb'), new_source: 'x' })).toBe('deny');
-    expect(files('MultiEdit', { file_path: join(ROOT, 'src/a.ts'), edits: [{ new_string: 'EXPO_PUBLIC_DB_PASSWORD' }] })).toBe('deny');
+    expect(
+      files('NotebookEdit', { notebook_path: join(ROOT, 'ios/x.ipynb'), new_source: 'x' }),
+    ).toBe('deny');
+    expect(
+      files('MultiEdit', {
+        file_path: join(ROOT, 'src/a.ts'),
+        edits: [{ new_string: 'EXPO_PUBLIC_DB_PASSWORD' }],
+      }),
+    ).toBe('deny');
   });
 
   test('missing paths and content: no opinion', () => {
@@ -856,7 +960,8 @@ describe('guard-files', () => {
 
 describe('Windows paths', () => {
   const winRoot = 'C:\\Users\\me\\proj';
-  const win = (access: 'read' | 'write', p: string) => classifyPath(access, p, winRoot)?.decision ?? 'allow';
+  const win = (access: 'read' | 'write', p: string) =>
+    classifyPath(access, p, winRoot)?.decision ?? 'allow';
 
   test('relativeToRoot compares across slash styles, drive case and ..', () => {
     expect(relativeToRoot('C:\\Users\\me\\proj\\ios\\App.swift', winRoot)).toBe('ios/App.swift');
@@ -885,12 +990,17 @@ describe('Windows paths', () => {
   });
 
   test('Edit tool input with a Windows file_path', () => {
-    const input = { tool_name: 'Edit', tool_input: { file_path: `${winRoot}\\ios\\x.swift`, new_string: 'x' } };
+    const input = {
+      tool_name: 'Edit',
+      tool_input: { file_path: `${winRoot}\\ios\\x.swift`, new_string: 'x' },
+    };
     expect(evaluateFileTool(input, winRoot)?.decision).toBe('deny');
   });
 
   test('PowerShell commands', () => {
-    const ps = (c: string) => evaluateBash(c, { ...ctx(), root: winRoot, cwd: winRoot, home: 'C:\\Users\\me' })?.decision ?? 'allow';
+    const ps = (c: string) =>
+      evaluateBash(c, { ...ctx(), root: winRoot, cwd: winRoot, home: 'C:\\Users\\me' })?.decision ??
+      'allow';
     expect(ps('Get-Content C:\\Users\\me\\proj\\.env')).toBe('deny');
     expect(ps('rm -rf C:\\Users\\me')).toBe('deny');
     expect(ps('rm -rf C:\\Users\\me\\proj')).toBe('deny');
@@ -918,7 +1028,10 @@ describe('hooks as processes', () => {
   });
 
   test('guard-bash prints a deny decision', () => {
-    const r = run('guard-bash.ts', JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'npm install lodash' } }));
+    const r = run(
+      'guard-bash.ts',
+      JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'npm install lodash' } }),
+    );
     expect(r.status).toBe(0);
     const out = JSON.parse(r.stdout);
     expect(out.hookSpecificOutput.hookEventName).toBe('PreToolUse');
@@ -927,26 +1040,101 @@ describe('hooks as processes', () => {
   });
 
   test('guard-bash also handles the PowerShell tool', () => {
-    const r = run('guard-bash.ts', JSON.stringify({ tool_name: 'PowerShell', tool_input: { command: 'Get-Content .env' } }));
+    const r = run(
+      'guard-bash.ts',
+      JSON.stringify({ tool_name: 'PowerShell', tool_input: { command: 'Get-Content .env' } }),
+    );
     expect(JSON.parse(r.stdout).hookSpecificOutput.permissionDecision).toBe('deny');
   });
 
   test('guard-bash is silent when it has no opinion', () => {
-    const r = run('guard-bash.ts', JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'bun run verify' } }));
+    const r = run(
+      'guard-bash.ts',
+      JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'bun run verify' } }),
+    );
     expect(r.status).toBe(0);
     expect(r.stdout).toBe('');
     expect(run('guard-bash.ts', '{}').stdout).toBe('');
   });
 
   test('guard-files prints an ask decision', () => {
-    const r = run('guard-files.ts', JSON.stringify({ tool_name: 'Edit', tool_input: { file_path: join(ROOT, '.claude/settings.json') } }));
+    const r = run(
+      'guard-files.ts',
+      JSON.stringify({
+        tool_name: 'Edit',
+        tool_input: { file_path: join(ROOT, '.claude/settings.json') },
+      }),
+    );
     expect(JSON.parse(r.stdout).hookSpecificOutput.permissionDecision).toBe('ask');
   });
 
-  test('lint-changed ignores non-code files and missing files', () => {
-    expect(run('lint-changed.ts', JSON.stringify({ tool_input: { file_path: join(ROOT, 'README.md') } })).status).toBe(0);
-    expect(run('lint-changed.ts', JSON.stringify({ tool_input: { file_path: join(ROOT, 'nope.ts') } })).status).toBe(0);
+  const withTempFile = (name: string, content: string, check: (file: string) => void) => {
+    // Inside the repo: the hook only formats files under the project root. Not gitignored (Prettier honours .gitignore).
+    const dir = mkdtempSync(join(ROOT, 'hooks-fmt-'));
+    try {
+      const file = join(dir, name);
+      writeFileSync(file, content);
+      check(file);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+  const edited = (file: string) => JSON.stringify({ tool_input: { file_path: file } });
+
+  test('lint-changed ignores unknown file types and missing files', () => {
+    withTempFile('notes.txt', 'a   b', (file) => {
+      expect(run('lint-changed.ts', edited(file)).status).toBe(0);
+      expect(readFileSync(file, 'utf8')).toBe('a   b');
+    });
+    expect(run('lint-changed.ts', edited(join(ROOT, 'nope.ts'))).status).toBe(0);
     expect(run('lint-changed.ts', '{}').status).toBe(0);
+  });
+
+  test('lint-changed ignores a relative file_path, so it cannot pass a flag to Prettier or ESLint', () => {
+    withTempFile('ugly.ts', 'export const a   =  {b:1}\n', (file) => {
+      const flag = run('lint-changed.ts', edited('-x'));
+      expect(flag.status).toBe(0);
+      expect(flag.stdout + flag.stderr).toBe('');
+      const rel = file.slice(ROOT.length + 1);
+      expect(run('lint-changed.ts', edited(rel)).status).toBe(0);
+      expect(readFileSync(file, 'utf8')).toBe('export const a   =  {b:1}\n');
+    });
+  });
+
+  test('lint-changed formats the edited file with Prettier', () => {
+    withTempFile('ugly.ts', 'export const a   =  {b:1}\n', (file) => {
+      expect(run('lint-changed.ts', edited(file)).status).toBe(0);
+      expect(readFileSync(file, 'utf8')).toBe('export const a = { b: 1 };\n');
+    });
+  });
+
+  test('lint-changed leaves files outside the project untouched', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hooks-out-'));
+    try {
+      const file = join(dir, 'ugly.ts');
+      const content = 'export const a   =  {b:1}\n';
+      writeFileSync(file, content);
+      expect(run('lint-changed.ts', edited(file)).status).toBe(0);
+      expect(readFileSync(file, 'utf8')).toBe(content);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('lint-changed blocks on an ESLint warning, as verify does (--max-warnings 0)', () => {
+    withTempFile('warn.ts', 'const unused = 1;\n', (file) => {
+      const r = run('lint-changed.ts', edited(file));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain('no-unused-vars');
+    });
+  });
+
+  test('lint-changed blocks on a file Prettier cannot parse', () => {
+    withTempFile('broken.ts', 'export const = ;\n', (file) => {
+      const r = run('lint-changed.ts', edited(file));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain('Prettier could not format');
+    });
   });
 });
 
@@ -959,7 +1147,8 @@ describe('launcher (run.ts): a broken guard must block, not fail open', () => {
       env: { ...process.env, CLAUDE_PROJECT_DIR: ROOT },
       cwd: ROOT,
     });
-  const bashInput = (command: string) => JSON.stringify({ tool_name: 'Bash', tool_input: { command }, hook_event_name: 'PreToolUse' });
+  const bashInput = (command: string) =>
+    JSON.stringify({ tool_name: 'Bash', tool_input: { command }, hook_event_name: 'PreToolUse' });
 
   test('guard-bash through the launcher denies the git --output attack', () => {
     const r = launch('guard-bash', bashInput('git log -1 --output=.claude/hooks/guard-bash.ts'));
@@ -968,17 +1157,27 @@ describe('launcher (run.ts): a broken guard must block, not fail open', () => {
   });
 
   test('guard-bash through the launcher asks for a production EAS build and is silent for verify', () => {
-    expect(JSON.parse(launch('guard-bash', bashInput('bun run eas build')).stdout).hookSpecificOutput.permissionDecision).toBe('ask');
+    expect(
+      JSON.parse(launch('guard-bash', bashInput('bun run eas build')).stdout).hookSpecificOutput
+        .permissionDecision,
+    ).toBe('ask');
     expect(launch('guard-bash', bashInput('bun run verify')).stdout).toBe('');
   });
 
   test('guard-files through the launcher asks before editing settings', () => {
-    const r = launch('guard-files', JSON.stringify({ tool_name: 'Edit', tool_input: { file_path: join(ROOT, '.claude/settings.json') } }));
+    const r = launch(
+      'guard-files',
+      JSON.stringify({
+        tool_name: 'Edit',
+        tool_input: { file_path: join(ROOT, '.claude/settings.json') },
+      }),
+    );
     expect(JSON.parse(r.stdout).hookSpecificOutput.permissionDecision).toBe('ask');
   });
 
   test('every guard fails closed on bad input through the launcher', () => {
-    for (const guard of ['guard-bash', 'guard-files', 'lint-changed']) expect(launch(guard, 'not json').status).toBe(2);
+    for (const guard of ['guard-bash', 'guard-files', 'lint-changed'])
+      expect(launch(guard, 'not json').status).toBe(2);
   });
 
   test('unknown or missing guard name exits 2', () => {
@@ -1005,7 +1204,11 @@ describe('launcher (run.ts): a broken guard must block, not fail open', () => {
     const dir = mkdtempSync(join(tmpdir(), 'hooks-launcher-'));
     try {
       copyFileSync(runner, join(dir, 'run.ts'));
-      for (const source of ["throw new Error('boom');\n", 'export const x = 1;\n', "export const main = () => { throw new Error('boom'); };\n"]) {
+      for (const source of [
+        "throw new Error('boom');\n",
+        'export const x = 1;\n',
+        "export const main = () => { throw new Error('boom'); };\n",
+      ]) {
         writeFileSync(join(dir, 'guard-bash.ts'), source);
         expect(launch('guard-bash', '{}', join(dir, 'run.ts')).status).toBe(2);
       }
@@ -1023,7 +1226,9 @@ describe('.claude/settings.json hook wiring', () => {
     hooks?: Record<string, { hooks?: HookCommand[] }[]>;
     permissions?: { deny?: string[] };
   };
-  const commands = Object.values(settings.hooks ?? {}).flatMap((groups) => groups.flatMap((g) => g.hooks ?? []));
+  const commands = Object.values(settings.hooks ?? {}).flatMap((groups) =>
+    groups.flatMap((g) => g.hooks ?? []),
+  );
   const hooksDir = join(ROOT, '.claude/hooks');
   const resolveArg = (a: string) => resolve(a.replace('${CLAUDE_PROJECT_DIR}', ROOT));
 
@@ -1054,7 +1259,15 @@ describe('.claude/settings.json hook wiring', () => {
   });
 
   test('permissions.deny covers agent login stores and Android signing files', () => {
-    for (const rule of ['Read(~/.config/e2e/**)', 'Read(~/.git-credentials)', 'Read(~/.codex/auth.json)', 'Read(~/.claude/.credentials.json)', 'Read(~/.gemini/oauth_creds.json)', 'Read(**/*.keystore)', 'Read(./credentials.json)']) {
+    for (const rule of [
+      'Read(~/.config/e2e/**)',
+      'Read(~/.git-credentials)',
+      'Read(~/.codex/auth.json)',
+      'Read(~/.claude/.credentials.json)',
+      'Read(~/.gemini/oauth_creds.json)',
+      'Read(**/*.keystore)',
+      'Read(./credentials.json)',
+    ]) {
       expect(settings.permissions?.deny).toContain(rule);
     }
   });

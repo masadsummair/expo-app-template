@@ -24,7 +24,7 @@ silence or "continue" is not approval.
    Fix every BLOCKING / BLOCK finding, re-run `bun run verify`, and re-run both reviewers if anything in the diff
    changed. If a report still does not end with `REVIEW-COMPLETE` after two re-runs, or BLOCKING findings remain
    after 3 review rounds, stop and report to the user.
-4. **Summarise and STOP (approval 1).** Show `git status --short` and the exact list of paths you will stage. Flag
+4. **Summarise and STOP (approval 1).** Show `git status --short -uall` and the exact list of paths you will stage. Flag
    untracked files, `.e2e/` output, keystores and credential files (`*.jks`, `*.keystore`, `google-services.json`,
    service-account JSON): none of them are staged. Also show what each reviewer found and what was fixed, and the
    checks that passed. Ask: "Commit these changes?"

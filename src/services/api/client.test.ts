@@ -78,7 +78,11 @@ describe('request cancellation', () => {
     globalThis.fetch = jest.fn(async () => {
       throw new DOMException('The operation timed out.', 'TimeoutError');
     }) as unknown as typeof fetch;
-    const result = await request({ path: '/me', schema: User, signal: new AbortController().signal });
+    const result = await request({
+      path: '/me',
+      schema: User,
+      signal: new AbortController().signal,
+    });
     expect(result.kind).toBe('timeout');
   });
 
@@ -107,14 +111,19 @@ describe('request origin guard', () => {
     },
   );
 
-  it.each(['/orders/../admin', '/orders/%2e%2e/admin', '/orders/./x', '/orders/..\\admin', '/%2E%2E', '/orders/.\t./admin', '/orders/.\n./admin'])(
-    'refuses %s so a dot segment cannot reach another endpoint',
-    async (path) => {
-      mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));
-      await expect(request({ path, schema: User })).rejects.toThrow();
-      expect(globalThis.fetch).not.toHaveBeenCalled();
-    },
-  );
+  it.each([
+    '/orders/../admin',
+    '/orders/%2e%2e/admin',
+    '/orders/./x',
+    '/orders/..\\admin',
+    '/%2E%2E',
+    '/orders/.\t./admin',
+    '/orders/.\n./admin',
+  ])('refuses %s so a dot segment cannot reach another endpoint', async (path) => {
+    mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));
+    await expect(request({ path, schema: User })).rejects.toThrow();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
 
   it('lets a literal percent sign through instead of throwing a URIError', async () => {
     mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));

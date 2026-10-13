@@ -19,6 +19,9 @@ function makeRoot(files: Files = {}): string {
   writeFileSync(join(root, '.gitattributes'), '* text=auto eol=lf\n');
   writeFileSync(join(root, 'AGENTS.md'), '# AGENTS.md\n');
   writeFileSync(join(root, 'CLAUDE.md'), '@AGENTS.md\n');
+  // docs/standards.md names the allowlisted config files in backticks, so the path check needs them on disk.
+  writeFileSync(join(root, 'jest.config.js'), 'module.exports = {};\n');
+  writeFileSync(join(root, 'metro.config.js'), 'module.exports = {};\n');
   for (const [rel, content] of Object.entries(files)) writeFileSync(join(root, rel), content);
   return root;
 }
@@ -42,7 +45,10 @@ describe('docs:check standards block', () => {
   test('fails when docs/standards.md is stale', () => {
     const root = makeRoot();
     const doc = readFileSync(join(root, 'docs/standards.md'), 'utf8');
-    writeFileSync(join(root, 'docs/standards.md'), doc.replace('Variant: base', 'Variant: hand-edited'));
+    writeFileSync(
+      join(root, 'docs/standards.md'),
+      doc.replace('Variant: base', 'Variant: hand-edited'),
+    );
     const r = checkDocs(root);
     expect(r.code).toBe(1);
     expect(r.out).toContain('docs/standards.md: is stale; run `bun run standards:gen`');
@@ -65,7 +71,10 @@ describe('docs:check standards block', () => {
 
   test('fails with the file name when a standards file breaks the schema', () => {
     const root = makeRoot();
-    writeFileSync(join(root, 'standards/design.json'), JSON.stringify({ rules: { 'core.sneaky': { rule: 'r' } } }));
+    writeFileSync(
+      join(root, 'standards/design.json'),
+      JSON.stringify({ rules: { 'core.sneaky': { rule: 'r' } } }),
+    );
     const r = checkDocs(root);
     expect(r.code).toBe(1);
     expect(r.out).toContain('standards/design.json');
@@ -84,7 +93,9 @@ describe('docs:check Layout block', () => {
   });
 
   test('ignores prose words and bare file names, accepts existing paths', () => {
-    const root = makeRoot({ 'AGENTS.md': layout('src/ routes, client.ts + one file per resource (app)') });
+    const root = makeRoot({
+      'AGENTS.md': layout('src/ routes, client.ts + one file per resource (app)'),
+    });
     mkdirSync(join(root, 'src'));
     expect(checkDocs(root).code).toBe(0);
   });
@@ -105,7 +116,9 @@ describe('docs:check agent registry', () => {
   test('an agent named nowhere fails', () => {
     const r = checkDocs(withAgent({}));
     expect(r.code).toBe(1);
-    expect(r.out).toContain('agent `scout` exists in .claude/agents but is not named in AGENTS.md, CLAUDE.md or docs/ai-kit.md');
+    expect(r.out).toContain(
+      'agent `scout` exists in .claude/agents but is not named in AGENTS.md, CLAUDE.md or docs/ai-kit.md',
+    );
   });
 });
 
@@ -137,6 +150,42 @@ describe('docs:check size budget', () => {
   test('hard-fails at 32 KiB combined even though the text is only 11,000 characters', () => {
     const r = checkDocs(makeRoot({ 'AGENTS.md': '—'.repeat(11_000) + '\n' }));
     expect(r.code).toBe(1);
-    expect(r.out).toContain('AGENTS.md + CLAUDE.md: 33012 bytes together, over the 32 KiB hard limit');
+    expect(r.out).toContain(
+      'AGENTS.md + CLAUDE.md: 33012 bytes together, over the 32 KiB hard limit',
+    );
+  });
+});
+
+describe('docs:check TypeScript-only', () => {
+  const allowed = {
+    'jest.config.js': 'module.exports = {};\n',
+    'metro.config.js': 'module.exports = {};\n',
+  };
+  function trackedRoot(files: Files, without: string[] = []): string {
+    const root = makeRoot(files);
+    for (const rel of without) rmSync(join(root, rel));
+    Bun.spawnSync(['git', 'init', '-q'], { cwd: root });
+    Bun.spawnSync(['git', 'add', '-A'], { cwd: root });
+    return root;
+  }
+
+  test('passes when only the allowlisted .js files are tracked', () => {
+    const r = checkDocs(trackedRoot(allowed));
+    expect(r.out).not.toContain('core.typescript-only');
+    expect(r.code).toBe(0);
+  });
+
+  test('fails on a tracked .js, .mjs or .sh file that is not allowlisted', () => {
+    for (const name of ['stray.js', 'stray.mjs', 'hook.sh']) {
+      const r = checkDocs(trackedRoot({ ...allowed, [name]: 'x\n' }));
+      expect(r.code).toBe(1);
+      expect(r.out).toContain(`${name}: core.typescript-only`);
+    }
+  });
+
+  test('fails when an allowlisted file is no longer tracked', () => {
+    const r = checkDocs(trackedRoot({}, ['jest.config.js']));
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('allows jest.config.js, but it is not tracked');
   });
 });

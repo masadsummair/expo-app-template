@@ -42,7 +42,10 @@ function apiUrl(path: string): string {
     throw new Error(`API path must start with a single "/": ${path}`);
   }
   // URL drops tabs and newlines before resolving, so `.\t.` is a `..` segment too.
-  const segments = path.replace(/[\t\n\r]/g, '').replace(/[?#].*/s, '').split(/[/\\]/);
+  const segments = path
+    .replace(/[\t\n\r]/g, '')
+    .replace(/[?#].*/s, '')
+    .split(/[/\\]/);
   if (segments.some((s) => ['.', '..'].includes(safeDecode(s)))) {
     throw new Error(`API path must not contain "." or ".." segments: ${path}`);
   }

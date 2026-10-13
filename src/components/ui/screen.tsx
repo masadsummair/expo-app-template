@@ -71,18 +71,16 @@ export function Screen({
           bottomOffset={footerHeight + KEYBOARD_GAP}
           keyboardShouldPersistTaps="handled"
         >
-          <View className={cn(COLUMN, 'grow py-6', className)}>
-            {children}
-          </View>
+          <View className={cn(COLUMN, 'grow py-6', className)}>{children}</View>
         </KeyboardAwareScrollView>
       ) : (
-        <View className={cn(COLUMN, 'flex-1 py-6', className)}>
-          {children}
-        </View>
+        <View className={cn(COLUMN, 'flex-1 py-6', className)}>{children}</View>
       )}
       {footer ? (
         // Open keyboard: drop the bottom inset (or the banner below the screen), the keyboard covers it.
-        <KeyboardStickyView offset={{ closed: 0, opened: bannerHeight > 0 ? bannerHeight : ownInset }}>
+        <KeyboardStickyView
+          offset={{ closed: 0, opened: bannerHeight > 0 ? bannerHeight : ownInset }}
+        >
           <View
             className={cn(COLUMN, 'bg-background pt-3')}
             style={{ paddingBottom: bottomInset + 12 }}

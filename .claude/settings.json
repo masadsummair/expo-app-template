@@ -16,14 +16,16 @@
       "Bash(bun run test)",
       "Bash(bun run test *)",
       "Bash(bun run test:hooks)",
+      "Bash(bun run test:tooling)",
       "Bash(bun run lint:claude)",
       "Bash(bun run docs:check)",
       "Bash(bun run skills:check)",
       "Bash(bun run contrast:check)",
       "Bash(bun run privacy:check)",
+      "Bash(bun run format:check)",
+      "Bash(bun run secrets:check)",
       "Bash(bun run doctor)",
       "Bash(bun run test:e2e:list)",
-      "Bash(bunx expo lint *)",
       "Bash(bunx tsc --noEmit)",
       "Bash(bunx expo-doctor)",
       "Bash(git status *)",
@@ -89,10 +91,7 @@
           {
             "type": "command",
             "command": "bun",
-            "args": [
-              "${CLAUDE_PROJECT_DIR}/.claude/hooks/run.ts",
-              "guard-bash"
-            ],
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run.ts", "guard-bash"],
             "timeout": 10
           }
         ]
@@ -103,10 +102,7 @@
           {
             "type": "command",
             "command": "bun",
-            "args": [
-              "${CLAUDE_PROJECT_DIR}/.claude/hooks/run.ts",
-              "guard-files"
-            ],
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run.ts", "guard-files"],
             "timeout": 10
           }
         ]
@@ -119,10 +115,7 @@
           {
             "type": "command",
             "command": "bun",
-            "args": [
-              "${CLAUDE_PROJECT_DIR}/.claude/hooks/run.ts",
-              "lint-changed"
-            ],
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run.ts", "lint-changed"],
             "timeout": 60
           }
         ]

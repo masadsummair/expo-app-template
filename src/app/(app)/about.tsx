@@ -13,7 +13,10 @@ export default function AboutSheet() {
   const { bottom } = useSafeAreaInsets();
   return (
     <ScrollView testID="about-sheet" className="flex-1 bg-background">
-      <View className="w-full max-w-xl gap-4 self-center px-5 pt-4" style={{ paddingBottom: bottom + 16 }}>
+      <View
+        className="w-full max-w-xl gap-4 self-center px-5 pt-4"
+        style={{ paddingBottom: bottom + 16 }}
+      >
         <SheetHeader title="About" testID="about" />
         <Text variant="caption">
           Built from the Expo app template. Replace this sheet with the details of your app.

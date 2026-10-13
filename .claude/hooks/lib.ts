@@ -50,7 +50,11 @@ function isEnvPart(part: string): boolean {
   const glob = b.search(/[*?[]/);
   if (glob !== -1) {
     const prefix = b.slice(0, glob);
-    return prefix.length > 0 && ('.env'.startsWith(prefix) || prefix.startsWith('.env')) && !prefix.startsWith('.env.example');
+    return (
+      prefix.length > 0 &&
+      ('.env'.startsWith(prefix) || prefix.startsWith('.env')) &&
+      !prefix.startsWith('.env.example')
+    );
   }
   return /^\.env(\.[a-z0-9_-]+)*$/.test(b) && b !== '.env.example' && !b.endsWith('.d.ts');
 }
@@ -86,20 +90,33 @@ const ENV_MESSAGE = (rel: string) =>
   `Access to ${rel} blocked, it may contain secrets. Use .env.example for variable names.`;
 
 // Case-insensitive on purpose: macOS and Windows file systems treat `Package.json` and `package.json` as one file.
+// ESLint and Prettier configs match at any depth: a nested one is loaded (or reformats) for the files beside it.
+// So does package.json: `bun run <script>` takes its scripts from the nearest one.
 const EXECUTED_BY_AUTO_APPROVED =
-  /^(package\.json|bun\.lock|jest\.config\.js|eslint\.config\.js|metro\.config\.js|babel\.config\.js|app\.config\.ts|eas\.json|scripts|\.github|\.git\/hooks|\.claude\/(agents|skills))(\/|$)/i;
+  /^(bun\.lock|jest\.config\.js|metro\.config\.js|babel\.config\.js|app\.config\.ts|eas\.json|scripts|\.github|\.git\/hooks|\.claude\/(agents|skills))(\/|$)|(^|\/)(package\.json|eslint\.config\.[cm]?[jt]s|\.eslintrc(\.[^/]+)?|\.prettierrc(\.[^/]+)?|prettier\.config\.[^/]+|\.prettierignore|\.editorconfig)$/i;
 // Tool configs and test scaffolding that other agents' tools, installs or the test runner load and execute.
-const TOOL_CONFIG = /^(\.(vscode|codex)|e2e)(\/|$)|^test\/setup\.ts$|(^|\/)(bunfig\.toml|\.npmrc|tsconfig[^/]*\.json)$/i;
+const TOOL_CONFIG =
+  /^(\.(vscode|codex)|e2e)(\/|$)|^test\/setup\.ts$|(^|\/)(bunfig\.toml|\.npmrc|tsconfig[^/]*\.json)$/i;
 
 // Slash commands carry allowed-tools and shell injection; they are never edited silently.
 const AGENT_CONTROL =
   /^(\.claude|\.agents|\.husky|\.githooks)(\/|$)|^(claude\.md|\.fingerprintignore|\.?lefthook(-local)?\.ya?ml)$/i;
 
 /** Decision for touching `path`. `read` only checks secrets; `write` also checks protected files. */
-export function classifyPath(access: 'read' | 'write', path: string, root: string): Decision | null {
+export function classifyPath(
+  access: 'read' | 'write',
+  path: string,
+  root: string,
+): Decision | null {
   const raw = relativeToRoot(path, root);
   const label = raw ?? path;
-  const rel = raw === null ? null : raw.split('/').map((seg) => seg.split(':')[0]?.replace(/[. ]+$/, '') ?? '').join('/');
+  const rel =
+    raw === null
+      ? null
+      : raw
+          .split('/')
+          .map((seg) => seg.split(':')[0]?.replace(/[. ]+$/, '') ?? '')
+          .join('/');
   if (isEnvName(baseName(path))) return { decision: 'deny', reason: ENV_MESSAGE(label) };
   if (access === 'read' || rel === null) return null;
 
@@ -107,28 +124,48 @@ export function classifyPath(access: 'read' | 'write', path: string, root: strin
   if (/^(ios|android)(\/|$)/i.test(rel)) {
     return {
       decision: 'deny',
-      reason: 'ios/ and android/ are generated (CNG) and overwritten by prebuild. Change native behaviour in app.config.ts or a config plugin instead.',
+      reason:
+        'ios/ and android/ are generated (CNG) and overwritten by prebuild. Change native behaviour in app.config.ts or a config plugin instead.',
     };
   }
   if (rel.split('/').some((seg) => /^[^.]{1,6}~\d+(\.[a-z0-9]{0,3})?$/i.test(seg))) {
-    return { decision: 'ask', reason: `${label} looks like a Windows 8.3 short name, which can alias a protected file. Use the long name.` };
+    return {
+      decision: 'ask',
+      reason: `${label} looks like a Windows 8.3 short name, which can alias a protected file. Use the long name.`,
+    };
   }
   // The agent must not silently rewrite its own guardrails or permissions.
   if (/^\.claude\/(hooks(\/|$)|settings)/i.test(rel) || rel.toLowerCase() === '.mcp.json') {
-    return { decision: 'ask', reason: `Editing ${rel} changes an agent's own hooks, permissions, or MCP servers. Confirm this is intended.` };
+    return {
+      decision: 'ask',
+      reason: `Editing ${rel} changes an agent's own hooks, permissions, or MCP servers. Confirm this is intended.`,
+    };
   }
   // e2e.config.ts spawns processes (app.command) whenever e2e runs: treat it like executable config.
   if (rel.toLowerCase() === 'e2e.config.ts') {
-    return { decision: 'ask', reason: 'Editing e2e.config.ts changes what the e2e runner executes (it spawns app.command). Confirm this is intended.' };
+    return {
+      decision: 'ask',
+      reason:
+        'Editing e2e.config.ts changes what the e2e runner executes (it spawns app.command). Confirm this is intended.',
+    };
   }
   if (EXECUTED_BY_AUTO_APPROVED.test(rel)) {
-    return { decision: 'ask', reason: `${rel} is executed by auto-approved commands (bun run verify, install, CI). Confirm this edit is intended.` };
+    return {
+      decision: 'ask',
+      reason: `${rel} is executed by auto-approved commands (bun run verify, install, CI). Confirm this edit is intended.`,
+    };
   }
   if (TOOL_CONFIG.test(rel)) {
-    return { decision: 'ask', reason: `${rel} configures tools, installs or tests that run with auto-approved commands or other agents. Confirm this edit is intended.` };
+    return {
+      decision: 'ask',
+      reason: `${rel} configures tools, installs or tests that run with auto-approved commands or other agents. Confirm this edit is intended.`,
+    };
   }
   if (AGENT_CONTROL.test(rel)) {
-    return { decision: 'ask', reason: `${rel} steers other agents (commands, rules, instructions, hooks). Confirm this edit is intended.` };
+    return {
+      decision: 'ask',
+      reason: `${rel} steers other agents (commands, rules, instructions, hooks). Confirm this edit is intended.`,
+    };
   }
   return null;
 }

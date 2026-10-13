@@ -22,9 +22,15 @@ if (!existsSync(specPath)) {
   process.exit(2);
 }
 
-const ids = [...new Set([...readFileSync(specPath, 'utf8').matchAll(/^\|\s*(AC-\d+)\s*\|/gm)].map((m) => m[1]!))];
+const ids = [
+  ...new Set(
+    [...readFileSync(specPath, 'utf8').matchAll(/^\|\s*(AC-\d+)\s*\|/gm)].map((m) => m[1]!),
+  ),
+];
 if (ids.length === 0) {
-  console.error(`check-ac-coverage: specs/${slug}.md has no acceptance-criteria rows (| AC-1 | ... |)`);
+  console.error(
+    `check-ac-coverage: specs/${slug}.md has no acceptance-criteria rows (| AC-1 | ... |)`,
+  );
   process.exit(1);
 }
 

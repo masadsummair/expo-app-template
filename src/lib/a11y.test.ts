@@ -6,7 +6,8 @@ const spy = jest
   .spyOn(AccessibilityInfo, 'announceForAccessibilityWithOptions')
   .mockImplementation(() => {});
 
-const setOS = (os: 'ios' | 'android') => Object.defineProperty(Platform, 'OS', { value: os, configurable: true });
+const setOS = (os: 'ios' | 'android') =>
+  Object.defineProperty(Platform, 'OS', { value: os, configurable: true });
 
 afterEach(() => spy.mockClear());
 

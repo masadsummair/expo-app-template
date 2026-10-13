@@ -95,7 +95,7 @@ Tokens and credentials are kept in expo-secure-store, or in storage encrypted wi
 
 ### core.typescript-only
 
-Source, scripts, hooks and configs are TypeScript; .js/.mjs/.cjs/.jsx/.sh files are allowed only on the allowlist.
+Source, scripts, hooks and configs are TypeScript. The only .js files are `jest.config.js` (Jest 29 loads a TypeScript config through ts-node, which is not a dependency, and that fails under verbatimModuleSyntax) and `metro.config.js` (Metro loads its config through Node, which reads TypeScript only from version 22.18 on while engines allows 22.12, and it cannot resolve expo/metro-config from an ES module). No .mjs, .cjs, .jsx or .sh files.
 
 - Why: One language for the app, the tooling and the agents; Windows-safe; type-checked.
 - Enforced by: script: docs:check

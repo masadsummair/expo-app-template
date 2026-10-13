@@ -25,7 +25,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { applyStoredTheme } from '@/stores/theme-store';
 
 initCrashReporting();
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync();
 // Apply the saved light/dark/system choice before the first frame (MMKV is synchronous).
 applyStoredTheme();
 

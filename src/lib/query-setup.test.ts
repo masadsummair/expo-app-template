@@ -17,7 +17,6 @@ jest.mock('expo-network', () => ({
   getNetworkStateAsync: () => mockState.initial,
 }));
 
-
 type Managers = typeof import('@tanstack/react-query');
 
 /** Fresh module graph each test so the module-level `installed` flag and the manager singletons reset. */
@@ -40,7 +39,10 @@ beforeEach(() => {
   mockState.appStateListener = null;
   mockState.initial = Promise.resolve({ isConnected: true });
   mockState.remove.mockClear();
-  jest.spyOn(AppState, 'addEventListener').mockImplementation(((_: string, l: (s: string) => void) => {
+  jest.spyOn(AppState, 'addEventListener').mockImplementation(((
+    _: string,
+    l: (s: string) => void,
+  ) => {
     mockState.appStateListener = l;
     return { remove: mockState.remove };
   }) as never);
