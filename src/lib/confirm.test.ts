@@ -29,19 +29,25 @@ describe('confirm', () => {
   });
 
   it('resolves false on cancel', async () => {
-    const result = confirm({ title: 'Delete?' });
+    const result = confirm({ title: 'Delete?', confirmLabel: 'Delete' });
     lastCall().buttons[0]?.onPress?.();
     await expect(result).resolves.toBe(false);
   });
 
   it('resolves false when dismissed (Android back / tap outside)', async () => {
-    const result = confirm({ title: 'Delete?' });
+    const result = confirm({ title: 'Delete?', confirmLabel: 'Delete' });
     lastCall().options.onDismiss?.();
     await expect(result).resolves.toBe(false);
   });
 
   it('marks the confirm button destructive on request', () => {
-    void confirm({ title: 'Delete?', destructive: true });
+    void confirm({ title: 'Delete?', confirmLabel: 'Delete', destructive: true });
     expect(lastCall().buttons[1]?.style).toBe('destructive');
+  });
+
+  it('requires a verb label: a bare "OK" hides what the button does', () => {
+    // @ts-expect-error confirmLabel is required; the default "OK" is gone
+    void confirm({ title: 'Delete?' });
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 });

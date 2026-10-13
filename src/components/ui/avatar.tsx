@@ -51,7 +51,8 @@ export function Avatar({ name, uri, size = 'md', className, ...props }: AvatarPr
           onError={() => setFailedUri(uri)}
         />
       ) : (
-        <Text className={cn('font-semibold text-muted', sizes[size].text)}>
+        // chrome: capped at 1.3x so the initials stay inside the fixed-size circle at large text sizes.
+        <Text variant="chrome" className={cn('font-semibold text-muted', sizes[size].text)}>
           {getInitials(name)}
         </Text>
       )}

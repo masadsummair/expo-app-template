@@ -1,11 +1,16 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import * as haptics from '@/lib/haptics';
+
 import { Switch } from './switch';
 
+jest.mock('@/lib/haptics', () => ({ toggle: jest.fn() }));
 jest.mock('uniwind', () => ({
   withUniwind: (component: unknown) => component,
   useCSSVariable: () => undefined,
 }));
+
+afterEach(() => jest.clearAllMocks());
 
 describe('Switch', () => {
   it('exposes switch role, label and checked state on the whole row', async () => {
@@ -52,5 +57,23 @@ describe('Switch', () => {
     );
     await fireEvent.press(screen.getByTestId('settings-notifications'));
     expect(onValueChange).not.toHaveBeenCalled();
+  });
+
+  it('fires one toggle haptic per press, with the new value', async () => {
+    const { rerender } = await render(
+      <Switch label="Alerts" value={false} testID="s" onValueChange={() => {}} />,
+    );
+    await fireEvent.press(screen.getByTestId('s'));
+    expect(haptics.toggle).toHaveBeenCalledTimes(1);
+    expect(haptics.toggle).toHaveBeenLastCalledWith(true);
+    await rerender(<Switch label="Alerts" value onValueChange={() => {}} testID="s" />);
+    await fireEvent.press(screen.getByTestId('s'));
+    expect(haptics.toggle).toHaveBeenCalledTimes(2);
+    expect(haptics.toggle).toHaveBeenLastCalledWith(false);
+  });
+
+  it('dims a disabled label through the disabled token', async () => {
+    await render(<Switch label="Alerts" value disabled testID="s" onValueChange={() => {}} />);
+    expect(screen.getByText('Alerts').props.className).toContain('opacity-disabled');
   });
 });

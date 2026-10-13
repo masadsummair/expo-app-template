@@ -44,7 +44,7 @@ If you are reading code to build a theory before that command exists — stop.
 - **`bun run doctor`** (`expo-doctor`) for version mismatches after dependency changes.
 - **Fetch failures:** Expo replaces global `fetch` with `expo/fetch`. Failures are `FetchError` (not `TypeError`) and the abort reason sits in `error.cause`; `problemFromError` handles both. A test that fails a query while signing out needs `gcTime: 0`.
 - **Stale nested native modules** (e.g. `expo-asset/node_modules/expo-constants`) can survive `bunx expo install --fix`. Remove their nested `bun.lock` entries; if clean, delete the nested folders and run `bun install --frozen-lockfile`.
-- **Text size and icons:** Android scales `Icon` glyphs with system text size and `Icon` divides `fontScale` back out, so add no scaling. Short single-line labels use `numberOfLines={1} adjustsFontSizeToFit`. React Compiler lint rejects setState in an effect body.
+- **Text size and icons:** `Icon` scales with text itself on iOS (up to 2x); Android icons keep their size by design: add no scaling. Labels wrap, they never shrink (`adjustsFontSizeToFit` is banned by `design.font-scaling`). React Compiler lint rejects setState in an effect body.
 - **Works in dev, broken in release:** check `EXPO_PUBLIC_*` inlining (must be literal `process.env.X`),
   missing config plugins, and code guarded by `__DEV__`.
 

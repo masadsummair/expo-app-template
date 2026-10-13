@@ -1,10 +1,10 @@
 import { Pressable, Switch as RNSwitch, type SwitchProps as RNSwitchProps } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { cn } from '@/lib/cn';
 import * as haptics from '@/lib/haptics';
 
 import { Text } from './text';
+import { useColorToken } from './tokens';
 
 export type SwitchProps = Omit<RNSwitchProps, 'value' | 'onValueChange'> & {
   label: string;
@@ -15,10 +15,6 @@ export type SwitchProps = Omit<RNSwitchProps, 'value' | 'onValueChange'> & {
   className?: string;
 };
 
-function asColor(value: string | number | undefined): string | undefined {
-  return typeof value === 'string' ? value : undefined;
-}
-
 export function Switch({
   label,
   value,
@@ -28,8 +24,8 @@ export function Switch({
   testID,
   ...props
 }: SwitchProps) {
-  const primary = asColor(useCSSVariable('--color-primary'));
-  const border = asColor(useCSSVariable('--color-border'));
+  const primary = useColorToken('--color-primary');
+  const border = useColorToken('--color-border');
 
   return (
     // The whole row is the control (label included); the native switch is only the visual indicator.
@@ -46,7 +42,7 @@ export function Switch({
       testID={testID}
       className={cn('min-h-12 flex-row items-center justify-between gap-3', className)}
     >
-      <Text className={cn('flex-1', disabled && 'opacity-50')}>{label}</Text>
+      <Text className={cn('flex-1', disabled && 'opacity-disabled')}>{label}</Text>
       <RNSwitch
         accessible={false}
         importantForAccessibility="no-hide-descendants"

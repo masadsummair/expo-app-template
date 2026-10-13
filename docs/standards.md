@@ -2,7 +2,7 @@
 
 # Standards
 
-Variant: base · Rules: 13 (core 13, design 0, variant 0)
+Variant: base · Rules: 18 (core 13, design 5, variant 0)
 
 Cite a rule as `path:line [rule.id]`.
 
@@ -99,6 +99,41 @@ Source, scripts, hooks and configs are TypeScript. The only .js files are `jest.
 
 - Why: One language for the app, the tooling and the agents; Windows-safe; type-checked.
 - Enforced by: script: docs:check
+
+### design.contrast
+
+Every token pair meets WCAG AA in both themes (text 4.5:1, icons and outlines 3:1), including placeholder, pressed fills, solid fills under the Android ripple and icon glyphs; every colour token exists in light and dark. Disabled text is exempt, and so are the documented transient pressed states (see the design-system skill).
+
+- Why: Fading a white-on-blue button for its iOS pressed state drops it from 5.17:1 to 3.62:1; a token missing from one theme renders as nothing in it.
+- Enforced by: script: contrast:check
+
+### design.font-scaling
+
+Never allowFontScaling={false} and never adjustsFontSizeToFit on labels. Text caps scaling per role instead.
+
+- Why: Shrinking or freezing text locks out Dynamic Type AX users and Android users at 200%; HIG says reflow, don't shrink.
+- Enforced by: script: lint
+
+### design.testids
+
+Interactive elements have a testID in kebab-case (<screen>-<element>).
+
+- Why: E2E tests and agents select by testID; label text is unreliable in React Native and differs per platform.
+- Enforced by: script: lint
+
+### design.tokens-only
+
+No hex or rgb() colours, Tailwind palette classes, arbitrary [..] values, or hard-coded fontSize/fontFamily in src/. Use semantic tokens (bg-primary, text-muted) and Text variants.
+
+- Why: A literal colour has no dark-mode value and skips contrast:check; an arbitrary value escapes the type scale and spacing.
+- Enforced by: script: lint
+
+### design.ui-primitives
+
+No raw Pressable, Text, TextInput, Button, TouchableOpacity, TouchableHighlight or TouchableWithoutFeedback from react-native outside src/components/ui; the UI kit imports only from @/lib and its own folder.
+
+- Why: The kit owns tokens, testIDs, accessibility and the platform press feedback; a raw primitive skips all of them, and kit imports of stores or services make it unshareable.
+- Enforced by: script: lint
 
 ### intake.audit-record
 

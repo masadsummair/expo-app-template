@@ -5,14 +5,14 @@ import { errorMessage } from '@/lib/error-message';
 
 export type ToastAction = { label: string; onPress: () => void };
 
-/** How long a toast with an action stays; the Toaster close button dismisses it sooner. */
-const ACTION_TOAST_MS = 15_000;
+/** How long a toast with an action stays: long enough to read it and reach the button (WCAG 2.2.1). */
+const ACTION_TOAST_MS = 8_000;
 
 type ToastOptions = { description?: string; action?: ToastAction };
 
 /*
  * Thin facade over sonner-native so the vendor can be swapped by editing this file only.
- * Requires a mounted <Toaster /> (see src/app/_layout.tsx).
+ * Requires a mounted <AppToaster /> (see src/app/_layout.tsx).
  */
 function options({ description, action }: ToastOptions = {}) {
   return {

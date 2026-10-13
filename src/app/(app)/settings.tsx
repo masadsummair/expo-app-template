@@ -11,7 +11,7 @@ import { deleteAccount } from '@/services/api/account';
 import { useAuthStore } from '@/stores/auth-store';
 import { useThemeStore, type ThemePreference } from '@/stores/theme-store';
 
-// At large text sizes three side-by-side buttons shrink their labels unevenly: stack them instead.
+// At large text sizes three side-by-side buttons wrap their labels unevenly: stack them instead.
 const STACK_AT_FONT_SCALE = 1.3;
 
 const themeOptions: { value: ThemePreference; label: string }[] = [
@@ -67,10 +67,10 @@ export default function SettingsScreen() {
               label={option.label}
               testID={`settings-theme-${option.value}`}
               variant={preference === option.value ? 'primary' : 'secondary'}
-              haptic={false}
               accessibilityRole="radio"
               accessibilityState={{ selected: preference === option.value }}
-              className={stackThemes ? undefined : 'flex-1 px-3'}
+              wrapperClassName={stackThemes ? undefined : 'flex-1'}
+              className={stackThemes ? undefined : 'px-3'}
               onPress={() => {
                 haptics.select();
                 setPreference(option.value);
@@ -94,6 +94,18 @@ export default function SettingsScreen() {
           icon={{ ios: 'info.circle', android: 'info' }}
           onPress={() => router.push('/about')}
         />
+        {__DEV__ ? (
+          <>
+            <Divider />
+            <ListItem
+              title="Component catalogue"
+              subtitle="Development builds only"
+              testID="settings-catalogue"
+              icon={{ ios: 'square.grid.2x2', android: 'grid_view' }}
+              onPress={() => router.push('/catalogue')}
+            />
+          </>
+        ) : null}
       </Card>
 
       <View className="gap-2">

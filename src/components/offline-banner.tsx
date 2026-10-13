@@ -37,7 +37,7 @@ export function OfflineBanner({ onHeightChange }: { onHeightChange: (height: num
     >
       <Text
         variant="caption"
-        className="text-center text-background"
+        className="text-center text-warning-foreground"
         accessibilityLiveRegion="polite"
       >
         {MESSAGE}

@@ -61,7 +61,7 @@ export default function OrdersScreen() {
 2. **testIDs:** the screen root is `<screen>-screen`; interactive elements are `<screen>-<element>`,
    kebab-case, unique on the screen (`orders-retry`, `orders-row-${order.id}`).
 3. **Lists:** `RefreshableList` (FlashList) for anything unbounded; never `ScrollView` + `.map`.
-4. **Styling:** Uniwind `className` with semantic tokens only (`bg-surface`, `text-muted`). No hex colours.
+4. **Styling:** Uniwind `className` with semantic tokens only (`bg-surface`, `text-muted`). No hex colours. Platform behaviour (sheets, toasts, press feedback, text scaling) is in the `design-system` skill.
 5. **No manual memoisation** (`useMemo`/`useCallback`/`memo`) — React Compiler is on.
 
 ## Layout rules
@@ -71,6 +71,7 @@ export default function OrdersScreen() {
 - No fixed pixel widths on containers that hold text; use flex, `%` or `max-w-*`. Use `min-h-*`, not `h-*`, so
   text can grow. No arbitrary values (`w-[220px]`), no `allowFontScaling={false}`.
 - Icon-only controls need `min-h-12 min-w-12` (48dp). Fixed sizes are fine for icon and avatar boxes.
+- List screens: `RefreshableList` pads its own bottom safe-area inset, so render them with `<Screen edges={[]}>`.
 - Primary actions in a form go in `footer`, not at the bottom of a scroll view.
 
 ## Verify
@@ -79,5 +80,5 @@ export default function OrdersScreen() {
 360dp wide (Android: `adb shell wm size 360x640`), font scale 2 (`adb shell settings put system font_scale 2.0`),
 and 600dp wide or more (a tablet AVD or the resizable emulator), in light and dark. Nothing may clip, overlap, or
 sit under the keyboard. Reset with `adb shell wm size reset`, `adb shell wm density reset` and
-`adb shell settings put system font_scale 1.0`. On iOS use an iPhone SE simulator and Larger Text.
+`adb shell settings put system font_scale 1.0`. On iOS use an iPhone SE simulator at AX5 (`xcrun simctl ui booted content_size accessibility-extra-extra-extra-large`; reset: `... content_size large`).
 For a user-facing flow, add an e2e test in `e2e/` (`e2e-flow` skill).

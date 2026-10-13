@@ -25,7 +25,7 @@ describe('toast', () => {
     const onPress = jest.fn();
     toast.info('Update ready', { action: { label: 'Restart', onPress } });
     const opts = (sonner.info as jest.Mock).mock.calls[0][1];
-    expect(opts).toMatchObject({ action: { label: 'Restart' }, duration: 15_000 });
+    expect(opts).toMatchObject({ action: { label: 'Restart' }, duration: 8_000 });
     opts.action.onClick();
     expect(onPress).toHaveBeenCalledTimes(1);
   });

@@ -30,7 +30,9 @@ export function Badge({ label, variant = 'default', className, ...props }: Badge
       className={cn('self-start rounded-full px-2.5 py-0.5', containerVariants[variant], className)}
       {...props}
     >
-      <Text className={cn('text-xs font-medium', labelVariants[variant])}>{label}</Text>
+      <Text variant="chrome" className={cn('font-medium', labelVariants[variant])}>
+        {label}
+      </Text>
     </View>
   );
 }

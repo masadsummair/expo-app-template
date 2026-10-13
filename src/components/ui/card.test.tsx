@@ -21,4 +21,9 @@ describe('Card and Divider', () => {
     expect(el.props.accessible).toBe(false);
     expect(el.props.importantForAccessibility).toBe('no');
   });
+
+  it('clips its children to the rounded corners (row ripples and highlights)', async () => {
+    await render(<Card testID="c" />);
+    expect(screen.getByTestId('c').props.className).toContain('overflow-hidden');
+  });
 });

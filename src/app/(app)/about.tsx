@@ -12,7 +12,8 @@ import { Card, Divider, ListItem, SheetHeader, Text } from '@/components/ui';
 export default function AboutSheet() {
   const { bottom } = useSafeAreaInsets();
   return (
-    <ScrollView testID="about-sheet" className="flex-1 bg-background">
+    // No background here: native-stack paints the sheet (contentStyle in (app)/_layout), transparent on iOS 26.
+    <ScrollView testID="about-sheet" className="flex-1">
       <View
         className="w-full max-w-xl gap-4 self-center px-5 pt-4"
         style={{ paddingBottom: bottom + 16 }}

@@ -1,7 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
+import * as haptics from '@/lib/haptics';
+
 import { PressableScale } from './pressable-scale';
+
+jest.mock('@/lib/haptics', () => ({ tap: jest.fn() }));
+
+afterEach(() => jest.clearAllMocks());
 
 describe('PressableScale', () => {
   it('is a labelled button that calls onPress', async () => {
@@ -42,5 +48,22 @@ describe('PressableScale', () => {
       </PressableScale>,
     );
     expect(screen.getByTestId('home-card').props.className).toBe('p-4 min-h-12');
+  });
+
+  it('gives no haptic by default and one light tap when asked', async () => {
+    await render(
+      <PressableScale testID="a" accessibilityLabel="A" onPress={() => {}}>
+        <Text>A</Text>
+      </PressableScale>,
+    );
+    await fireEvent.press(screen.getByTestId('a'));
+    expect(haptics.tap).not.toHaveBeenCalled();
+    await render(
+      <PressableScale testID="b" accessibilityLabel="B" haptic onPress={() => {}}>
+        <Text>B</Text>
+      </PressableScale>,
+    );
+    await fireEvent.press(screen.getByTestId('b'));
+    expect(haptics.tap).toHaveBeenCalledTimes(1);
   });
 });

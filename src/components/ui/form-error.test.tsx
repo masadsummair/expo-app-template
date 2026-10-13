@@ -6,6 +6,8 @@ import { FormError } from './form-error';
 
 jest.mock('@/lib/a11y', () => ({ announce: jest.fn() }));
 
+beforeEach(() => jest.clearAllMocks());
+
 describe('FormError', () => {
   it('renders nothing without a message', async () => {
     await render(<FormError testID="sign-in-error" />);

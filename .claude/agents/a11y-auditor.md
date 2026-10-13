@@ -35,7 +35,7 @@ This template mandates the legacy props (`accessibilityRole`, `accessibilityLabe
 1. **Code checklist.** For each finding give `path:line`.
    - Every interactive element: a role, a non-empty label (icon-only controls have no visible text, so the label is
      the only name), and `accessibilityState` for disabled, selected, checked, busy, expanded. Prefer the `Button`,
-     `TextField` primitives, which already do this; raw `Pressable` needs all three.
+     `TextField` primitives, which already do this; raw `Pressable` needs all three. Icon-only controls are at least `min-h-12 min-w-12` (48dp); `Icon` already scales with text on iOS (Android icons keep their size by design).
    - Titles: `Text variant="title" | "heading"` already sets `accessibilityRole="header"`. Report a missing header
      role only on a raw `react-native` `Text` or on a `Text` with another variant that acts as a title.
    - Images: a label, or decorative (`accessible={false}`, `importantForAccessibility="no"`).
@@ -65,12 +65,11 @@ This template mandates the legacy props (`accessibilityRole`, `accessibilityLabe
    `useReducedMotion()` (reanimated) is read once at app start and does **not** update when the user flips the OS
    setting. For a live value use `AccessibilityInfo.isReduceMotionEnabled()` plus the `reduceMotionChanged` event.
    Animations built from `@/lib/motion` presets already carry `reduceMotion: ReduceMotion.System`; report only raw
-   `withTiming`/`withSpring`/layout animations without `reduceMotion`.
+   `withTiming`/`withSpring`/layout animations without `reduceMotion`. With Reduce Motion on, parallax and zooms must become a cross-fade (`design-system` skill).
 5. **Layout and text size** (read the code; confirm on a device when one is running). Content that runs past the
    `Screen` column on a >=600dp window (Android 16 ignores the portrait lock there); a layout that breaks at 360dp
    wide or 200% font scale (clipped or overlapping text, a CTA pushed off screen or hidden behind the keyboard); fixed
-   `w-*`/`h-*` on text containers; section captions or titles without `accessibilityRole="header"`; interactive
-   elements with no visible focus state (`focus:` style, as `TextField` does) for keyboard and switch-access users.
+   `w-*`/`h-*` on text containers; section captions or titles without `accessibilityRole="header"`; text inputs with no visible focus state (`focus:` style, as `TextField` does); `Button` and `ListItem` need no custom focus style; report a raw Pressable that suppresses the platform focus highlight.
 6. **Device (only if an emulator or simulator is running; otherwise write "not run").** Android, headless:
    ```bash
    mkdir -p .expo/a11y && MSYS_NO_PATHCONV=1 adb shell uiautomator dump /sdcard/ui.xml && MSYS_NO_PATHCONV=1 adb pull /sdcard/ui.xml .expo/a11y/ui.xml
@@ -80,7 +79,7 @@ This template mandates the legacy props (`accessibilityRole`, `accessibilityLabe
    420dpi). `hitSlop` is not in `bounds`, so small controls with `hitSlop` are false positives; say so. Ignore the
    dev-menu and "Tools" overlay nodes of a development build. Large text: `adb shell settings put system font_scale 2.0`,
    screenshot, look for clipped text, then **always** restore with `adb shell settings put system font_scale 1.0`
-   (and `adb shell cmd uimode night no` if you changed dark mode). iOS minimum is 44pt; iOS sizes are "not measured"
+   (and `adb shell cmd uimode night no` if you changed dark mode). iOS, when a simulator is booted: `xcrun simctl ui booted content_size accessibility-extra-extra-extra-large` (reset: `... content_size large`) and `xcrun simctl ui booted increase_contrast enabled` (reset: `disabled`). iOS minimum is 44pt; iOS sizes are "not measured"
    from this agent (it has no e2e MCP). Touch targets of 44pt/48dp are platform guidance, not a legal requirement (WCAG 2.2 AA is 24 CSS px).
 
 ## Fix patterns (match the repo: ref-as-prop, no memo hooks, `@/components/ui`)

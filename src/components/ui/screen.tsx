@@ -1,5 +1,5 @@
 import { createContext, use, useState, type ReactNode } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets, type Edge } from 'react-native-safe-area-context';
 
@@ -67,9 +67,12 @@ export function Screen({
     <View className="flex-1 bg-background" style={padding} testID={testID}>
       {preset === 'scroll' ? (
         <KeyboardAwareScrollView
+          testID={testID ? `${testID}-scroll` : undefined}
           contentContainerStyle={{ flexGrow: 1 }}
           bottomOffset={footerHeight + KEYBOARD_GAP}
           keyboardShouldPersistTaps="handled"
+          // iOS: dragging the content down moves the keyboard with the finger (the platform convention).
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
         >
           <View className={cn(COLUMN, 'grow py-6', className)}>{children}</View>
         </KeyboardAwareScrollView>

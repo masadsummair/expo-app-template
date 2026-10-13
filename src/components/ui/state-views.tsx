@@ -58,7 +58,7 @@ export function EmptyState({ title, message, action, testID, className }: EmptyS
           label={action.label}
           onPress={action.onPress}
           testID={`${testID}-action`}
-          className="mt-4"
+          wrapperClassName="mt-4"
         />
       ) : null}
     </View>
@@ -98,7 +98,7 @@ export function ErrorState({
         variant="secondary"
         onPress={onRetry}
         testID={`${testID}-retry`}
-        className="mt-4"
+        wrapperClassName="mt-4"
       />
     </View>
   );

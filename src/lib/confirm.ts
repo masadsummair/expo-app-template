@@ -3,7 +3,8 @@ import { Alert } from 'react-native';
 type ConfirmOptions = {
   title: string;
   message?: string;
-  confirmLabel?: string;
+  /** The verb the button performs: "Delete", "Discard", "Sign out". Required: never a bare "OK". */
+  confirmLabel: string;
   cancelLabel?: string;
   /** Styles the confirm button as destructive (red on iOS). */
   destructive?: boolean;
@@ -13,7 +14,7 @@ type ConfirmOptions = {
 export function confirm({
   title,
   message,
-  confirmLabel = 'OK',
+  confirmLabel,
   cancelLabel = 'Cancel',
   destructive = false,
 }: ConfirmOptions): Promise<boolean> {
