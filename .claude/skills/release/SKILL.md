@@ -159,6 +159,13 @@ Use `update:republish` and the rollback commands only within one environment; ad
 Flags verified against eas-cli 24.11.0 `--help`; re-run `--help` if the CLI has moved. `update:edit` and
 `channel:rollout` are interactive — hand over rather than loop.
 
+## Known build failures
+
+- **EAS build fails in "Configure expo-updates" with "Runtime version mismatch"** and a `node_modules/<pkg>` fingerprint diff: a local Android build rewrote a library's `AndroidManifest.xml`. Keep `.fingerprintignore`. Debug other diffs with `bunx --no-install fingerprint fingerprint:generate --platform ios --debug`.
+- **A local iOS build fails in `expo-modules-jsi` with "cannot be annotated with either SWIFT_RETURNS_RETAINED…":** that is the toolchain, not the code. Local iOS builds need Xcode ≥ 26.4; upgrade Xcode or build on EAS. Do not patch `node_modules`.
+- **A release build without `EXPO_PUBLIC_APP_ENV` counts as production**, so the mock sign-in refuses it and `env.ts` requires https. Local release builds for e2e or perf runs set `EXPO_PUBLIC_APP_ENV=development`.
+- **EAS Update is off until `EAS_PROJECT_ID` is set in `app.config.ts`.** The URL `scheme` must stay lowercase: uppercase breaks EAS Update publishing.
+
 ## Report
 
 State: what was built/published, profile, channel, platform, update group id or build id, the fingerprint

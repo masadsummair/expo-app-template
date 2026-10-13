@@ -74,6 +74,8 @@ up Sentry (step 7).
 | [docs/ai-kit.md](docs/ai-kit.md) | AI tool support, the feature workflow, skills, subagents, hooks, MCP servers |
 | [docs/testing.md](docs/testing.md) | pre-commit checks, e2e tests, AI steps on a subscription, optional CI |
 | [docs/release.md](docs/release.md) | builds, OTA updates, env vars, SDK upgrades, keeping the template current |
-| [AGENTS.md](AGENTS.md) | the rules every agent follows, and the gotchas found in this template |
+| [AGENTS.md](AGENTS.md) | the rules every agent follows |
+| [docs/standards.md](docs/standards.md) | the project's goals, non-goals and rules with IDs (generated from `standards/*.json`) |
+| [docs/adr/](docs/adr) | architecture decision records |
 
 MIT licensed (`LICENSE`). Credits and upstream notices: `THIRD_PARTY_NOTICES.md`.

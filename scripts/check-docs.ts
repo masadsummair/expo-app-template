@@ -8,10 +8,13 @@
  * Checks: `bun run <script>` exists in package.json; backtick-quoted paths exist; the Layout block
  * in AGENTS.md exists on disk; every agent file is documented; every skill named in the docs exists;
  * CLAUDE.md imports AGENTS.md; stack versions and env vars match the code; the e2e build mode
- * (APP_ID, DEV_CLIENT_SCHEME) matches app.config.ts; every MCP config file lists the same servers; .gitattributes exists.
+ * (APP_ID, DEV_CLIENT_SCHEME) matches app.config.ts; every MCP config file lists the same servers; .gitattributes exists;
+ * standards/{core,design,variant}.json match their schema and docs/standards.md is the rendered output;
+ * AGENTS.md and CLAUDE.md stay inside their size budget.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { loadStandards, renderStandards } from "./lib/standards";
 
 const args = process.argv.slice(2);
 const strict = args.includes("--strict");
@@ -114,33 +117,28 @@ for (const f of docs) {
   for (const m of (text[f] ?? "").matchAll(/`([^`\n]+)`/g)) checkPath(f, m[1] ?? "");
 }
 
-// 3. The Layout code block in AGENTS.md: each column that starts with a path must exist.
+// 3. The Layout code block in AGENTS.md is a few prose lines: every token in it that is a path (has a "/") or a root config file must exist.
 {
   const t = text["AGENTS.md"];
   const block = t?.match(/^## Layout\s*\n+```[^\n]*\n([\s\S]*?)\n```/m)?.[1];
   if (t && !block) warn("AGENTS.md", "no `## Layout` code block found; layout drift is unchecked");
-  for (const line of (block ?? "").split("\n")) {
-    line.split(/\s{2,}/).forEach((seg, i) => {
-      // Later columns are prose; only the first column or an explicit directory path is a layout entry.
-      if (i > 0 && !seg.trim().split(/\s+/)[0]?.includes("/")) return;
-      const tok = seg.trim().split(/\s+/)[0] ?? "";
-      const isPath = /^[.\w()@-]+(\/[.\w()@-]*)*\/?$/.test(tok) && (tok.includes("/") || /\.\w+$/.test(tok));
-      if (!isPath) return;
-      const clean = tok.replace(/\/+$/, "");
-      if (!existsSync(at(clean)) && !MISSING_PATH_OK.has(clean)) err("AGENTS.md", `Layout lists \`${tok}\` but it does not exist`);
-    });
+  for (const raw of (block ?? "").split(/\s+/)) {
+    const tok = raw.replace(/[,;:]+$/, "");
+    if (!/^[.\w()@-]+(\/[.\w()@-]*)*\/?$/.test(tok) || !(tok.includes("/") || ROOT_FILE.test(tok))) continue;
+    const clean = tok.replace(/\/+$/, "");
+    if (!existsSync(at(clean)) && !MISSING_PATH_OK.has(clean)) err("AGENTS.md", `Layout lists \`${tok}\` but it does not exist`);
   }
 }
 
 // 4. Inventory: agents documented, skills named in docs exist, own skills documented.
 {
-  const registry = (text["AGENTS.md"] ?? "") + (text["CLAUDE.md"] ?? "");
+  const registry = (text["AGENTS.md"] ?? "") + (text["CLAUDE.md"] ?? "") + (text["docs/ai-kit.md"] ?? "");
   for (const a of agentNames) {
-    if (!registry.includes("`" + a + "`")) err("AGENTS.md", `agent \`${a}\` exists in .claude/agents but is not named in AGENTS.md or CLAUDE.md`);
+    if (!registry.includes("`" + a + "`")) err("AGENTS.md", `agent \`${a}\` exists in .claude/agents but is not named in AGENTS.md, CLAUDE.md or docs/ai-kit.md`);
   }
   for (const s of ownSkills) {
     if (!registry.includes("`" + s + "`") && !registry.includes("`" + s + "/") ) {
-      warn("AGENTS.md", `own skill \`${s}\` is not named in AGENTS.md or CLAUDE.md`);
+      warn("AGENTS.md", `own skill \`${s}\` is not named in AGENTS.md, CLAUDE.md or docs/ai-kit.md`);
     }
     if (sources && !sources.includes(s)) warn(".claude/skills/SOURCES.md", `own skill \`${s}\` is not in its "authored for this template" sentence`);
   }
@@ -266,6 +264,40 @@ for (const f of ["CLAUDE.md"]) {
 
 // 10. CRLF checkouts on Windows break shell scripts; .gitattributes pins line endings.
 if (!existsSync(at(".gitattributes"))) err(".gitattributes", "missing; Windows checkouts would convert line endings");
+
+// 11. Standards: standards/*.json match the schema, and docs/standards.md is exactly what they render to.
+{
+  try {
+    const rendered = renderStandards(loadStandards(root));
+    const current = readIf("docs/standards.md");
+    if (current === null) err("docs/standards.md", "missing; run `bun run standards:gen`");
+    else if (current.replace(/\r\n/g, "\n") !== rendered) err("docs/standards.md", "is stale; run `bun run standards:gen` (never edit it by hand)");
+  } catch (e) {
+    err("standards", (e as Error).message);
+  }
+}
+
+// 12. Doc budget: the files every agent loads on every turn stay small. The ratchet is the spec's target size
+// (about 150 lines and 25 lines) plus a byte cap, with room for small later edits; trim something else instead of
+// raising it. The combined hard limit is a backstop.
+{
+  const RATCHET: Record<string, { lines: number; bytes: number }> = {
+    "AGENTS.md": { lines: 150, bytes: 18_000 },
+    "CLAUDE.md": { lines: 25, bytes: 2_000 },
+  };
+  const HARD_LIMIT_BYTES = 32 * 1024;
+  let total = 0;
+  for (const [file, max] of Object.entries(RATCHET)) {
+    const t = text[file];
+    if (t === undefined) continue;
+    const bytes = Buffer.byteLength(t, "utf8");
+    const lines = t.split("\n").length - (t.endsWith("\n") ? 1 : 0);
+    total += bytes;
+    if (lines > max.lines) err(file, `${lines} lines, ratchet is ${max.lines}: trim it, do not raise the ratchet`);
+    if (bytes > max.bytes) err(file, `${bytes} bytes, ratchet is ${max.bytes}: trim it, do not raise the ratchet`);
+  }
+  if (total > HARD_LIMIT_BYTES) err("AGENTS.md + CLAUDE.md", `${total} bytes together, over the 32 KiB hard limit (${HARD_LIMIT_BYTES})`);
+}
 
 const errors = findings.filter((f) => f.level === "error");
 const warnings = findings.filter((f) => f.level === "warn");

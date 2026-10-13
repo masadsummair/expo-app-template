@@ -16,7 +16,7 @@ a hook denies `npx`, `npm`, and `bun add`.
 - Never push, open a PR, run `eas build --profile production`, `eas submit`, or `eas update`. Report instead.
 - Dependencies change only through `bunx expo install ...`. Adding `overrides`/`resolutions` to `package.json`: ask first.
 - Version targets, minimum patch versions and skip-version rules: follow the vendored `expo-upgrade` skill's version
-  notes and the Gotchas in `AGENTS.md`. Never downgrade below the minimum they name.
+  notes and `docs/setup.md`. Never downgrade below the minimum they name.
 - If a hook blocks a Bash call, do not work around it: report the command and the message.
 - One change, one check. Do not stack a second step on an unverified first one; stop after 3 failed attempts on the
   same error and report what you tried.
@@ -33,7 +33,7 @@ a hook denies `npx`, `npm`, and `bun add`.
    Linux skip it, mark local iOS builds unavailable and plan `bun run eas build --profile development --platform ios`
    (ask first, it spends quota). On every OS check the JDK and Android SDK. Compare Node with the `node` pin in `eas.json`
    (and the `image` alias if set) and with the e2e floor in the `e2e-flow` skill; report if `build.base.node` is below it.
-   The required Xcode comes from the vendored skill's version notes and the Gotchas in `AGENTS.md`. If local Xcode is
+   The required Xcode comes from the vendored skill's version notes and `docs/setup.md`. If local Xcode is
    too old, plan EAS cloud builds for iOS; do not try to work around it, and do not patch native code.
 4. **Upgrade.**
    ```bash
