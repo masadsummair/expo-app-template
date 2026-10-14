@@ -70,12 +70,12 @@ src/global.css design tokens (light + dark)   test/ Jest   e2e/ and e2e.config.t
 
 ## Conventions
 
-- **Components:** named functions; `ref` as a prop (no `forwardRef`, no `React.FC`); no `useMemo`/`useCallback`/`memo`. Use `@/components/ui`, not raw RN `Text`/`TextInput`/`Button` (ESLint enforces it).
+- **Components:** named functions; `ref` as a prop (no `forwardRef`, no `React.FC`); no `useMemo`/`useCallback`/`memo`. Use `@/components/ui`, not raw RN `Text`/`TextInput`/`Button`/`Pressable` (ESLint enforces it).
 - **Styling:** Uniwind `className` + semantic tokens (`bg-surface`, `text-muted`, `bg-primary`); no hex, Tailwind palette colours or arbitrary values (`p-[13px]`). New tokens go in **both** `@variant light` and `@variant dark` in `src/global.css`. Merge with `cn()`.
 - **Lists:** FlashList for unbounded data, never `ScrollView` + `.map`. Stable `keyExtractor`, `getItemType` for mixed rows, no `key` or local state inside rows (they recycle). Images: expo-image with `recyclingKey` and explicit width/height.
 - **Storage:** secrets and tokens in `expo-secure-store`, or storage encrypted with a key kept there [core.tokens-in-keychain]; everything else in `@/lib/storage`. Never AsyncStorage.
 - **Types and files:** no `any`, no `as` to silence errors (fix the type or widen the zod schema); kebab-case files; imports via `@/`.
-- **Feedback:** messages come from `errorMessage(e)` / `toastError(e)`, never raw `error.message`; `toast` from `@/lib/toast` (not sonner-native); destructive actions go through `confirm({ destructive: true })`.
+- **Feedback:** messages come from `errorMessage(e)` / `toastError(e)`, never raw `error.message`; `toast` from `@/lib/toast` (not sonner-native); destructive actions go through `confirm({ confirmLabel: 'Delete', destructive: true })`.
 - **Motion:** Reanimated 4 with the `@/lib/motion` presets (they follow reduce-motion); animate `transform` and `opacity` only; explicit `'worklet'` in `useAnimatedStyle` and gesture callbacks (reanimated#6826); no Uniwind `animate-*` (Pro only).
 - **Performance:** stay on Expo's pinned versions; measure in release builds, not dev (`SENTRY_DISABLE_AUTO_UPLOAD=true EXPO_PUBLIC_APP_ENV=development bunx expo run:android --variant release`, `... run:ios --configuration Release`; PowerShell: set `$env:SENTRY_DISABLE_AUTO_UPLOAD = 'true'` and `$env:EXPO_PUBLIC_APP_ENV = 'development'` first, because the upload step fails without Sentry credentials).
 
@@ -88,8 +88,8 @@ src/global.css design tokens (light + dark)   test/ Jest   e2e/ and e2e.config.t
 
 ## UI
 
-- Reuse `@/components/ui` (listed in `src/components/ui/index.ts`) before building a primitive. `Icon` takes both an SF Symbol and a Material Symbol name. A pressable `ListItem` needs a `testID`. Route errors: `export { ErrorFallback as ErrorBoundary } from '@/components/error-fallback'`.
-- Colours, type and spacing come from tokens and `Text` variants, never literals. Never `allowFontScaling={false}`. Interactive components handle pressed, focused, disabled and loading states.
+- Reuse `@/components/ui` (listed in `src/components/ui/index.ts`) before building a primitive. `Icon` takes both an SF Symbol and a Material Symbol name. A pressable `ListItem` needs a `testID`. Route errors: `export { ErrorFallback as ErrorBoundary } from '@/components/error-fallback'`. Platform rules and judgement calls: the `design-system` skill.
+- Colours, type and spacing come from tokens and `Text` variants, never literals. Never `allowFontScaling={false}`. Interactive components handle pressed (ripple on Android, fade or highlight on iOS), disabled and loading; text inputs also show focus; buttons and rows need no focus ring.
 - Forms: submit button in the `Screen` `footer`; chain fields with `returnKeyType`, `onSubmitEditing` and `ref={field.ref}`; `mode: 'onTouched'`; set `keyboardType`, `autoComplete`, `textContentType`.
 - Screen titles and section captions are headings (`accessibilityRole="header"`); set titles with `<Stack.Screen options>`; header colours come from tokens via the navigation theme in `src/app/_layout.tsx`.
 - Content that appears without focus (errors, loading, toasts) calls `announce()` from `@/lib/a11y` (`toast`, `TextField` and the state views already do): `accessibilityLiveRegion` is Android-only and `accessibilityRole="alert"` is silent on iOS. Labels go on Pressables; icons are decorative unless labelled.
@@ -103,9 +103,10 @@ src/global.css design tokens (light + dark)   test/ Jest   e2e/ and e2e.config.t
 
 ## Platform parity (iOS + Android must both feel right)
 
-- Navigation, sheets, icons and haptics are native per platform; colours, type scale, spacing and components are identical.
+- Structure, tokens, testIDs and copy are shared; behaviour follows the platform (press feedback, haptics, sheets,
+  toasts, text scaling). Never dress one platform in the other's style. Details: the `design-system` skill.
 - Sheets: `presentation: 'formSheet'`, max 3 detents (Android), render `SheetHeader`, no native header. Root toasts may render behind an Android sheet: show errors inline there.
-- Native Stack only. Keep `predictiveBackGestureEnabled: false` and no NativeTabs until SDK 58 (open Android bugs). Haptics via `@/lib/haptics`, never the only feedback. Status bar set once in the root layout (`style="auto"`).
+- Native Stack only. Keep `predictiveBackGestureEnabled: false` and no NativeTabs until SDK 58 (open Android bugs). Haptics are off by default (`Button` and `PressableScale` take `haptic`); use `@/lib/haptics` for outcomes, never as the only feedback. Status bar set once in the root layout (`style="auto"`).
 
 ## Verification
 
@@ -124,5 +125,5 @@ src/global.css design tokens (light + dark)   test/ Jest   e2e/ and e2e.config.t
 
 ## Skills, agents, standards
 
-Skills are folders with a `SKILL.md`. Edit them in `.claude/skills/`; Codex reads `.agents/skills/`, a generated copy (`bun run skills:sync`; `verify` fails on drift). Own skills: `new-feature` (a feature end to end), `verify`, `ship` (to a PR, two approval stops), `research`, `slop-review`, `adversarial-review`, `new-screen`, `new-component`, `add-form`, `add-store`, `api-endpoint`, `env-secrets`, `release`, `deep-links`, `push-notifications`, `e2e-flow`, `debug-rn`. The `expo-*`, `eas-*` and `react-native-*` skills are vendored upstream (`.claude/skills/SOURCES.md`; do not edit). When a rule here conflicts with a vendored skill, this file wins: read `npx`/`npm install` as `bunx` / `bunx expo install`, drop `@latest`, run `eas` as `bun run eas`, and treat `xcrun`, `xed` and `pod` as macOS-only.
+Skills are folders with a `SKILL.md`. Edit them in `.claude/skills/`; Codex reads `.agents/skills/`, a generated copy (`bun run skills:sync`; `verify` fails on drift). Own skills: `new-feature` (a feature end to end), `verify`, `ship` (to a PR, two approval stops), `research`, `slop-review`, `adversarial-review`, `new-screen`, `new-component`, `design-system`, `add-form`, `add-store`, `api-endpoint`, `env-secrets`, `release`, `deep-links`, `push-notifications`, `e2e-flow`, `debug-rn`. The `expo-*`, `eas-*` and `react-native-*` skills are vendored upstream (`.claude/skills/SOURCES.md`; do not edit). When a rule here conflicts with a vendored skill, this file wins: read `npx`/`npm install` as `bunx` / `bunx expo install`, drop `@latest`, run `eas` as `bun run eas`, and treat `xcrun`, `xed` and `pod` as macOS-only.
 Review roles are `.claude/agents/*.md` (without subagents, read the file as a checklist): run `slop-reviewer` and `adversarial-reviewer` before opening a PR. The agent list, hooks and MCP servers: `docs/ai-kit.md`. Rules with IDs and the project's goals: `docs/standards.md`. Conventional commits: `type(scope): description`, ≤ 100 chars.

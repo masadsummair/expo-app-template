@@ -1,5 +1,7 @@
 import { render, screen } from '@testing-library/react-native';
 
+import { resetPlatform, setPlatform } from '../../../test/platform';
+
 import { Avatar, getInitials } from './avatar';
 
 jest.mock('uniwind', () => ({
@@ -17,6 +19,8 @@ describe('getInitials', () => {
 });
 
 describe('Avatar', () => {
+  afterEach(resetPlatform);
+
   it('falls back to initials without a uri and labels the image with the name', async () => {
     await render(<Avatar name="Ada Lovelace" testID="profile-avatar" />);
     expect(screen.getByText('AL')).toBeTruthy();
@@ -27,4 +31,13 @@ describe('Avatar', () => {
     await render(<Avatar name="Ada Lovelace" uri="https://example.com/a.png" />);
     expect(screen.queryByText('AL')).toBeNull();
   });
+
+  it.each(['ios', 'android'] as const)(
+    '%s: initials are chrome text, capped at 1.3x so they stay inside the circle',
+    async (os) => {
+      setPlatform(os);
+      await render(<Avatar name="Ada Lovelace" />);
+      expect(screen.getByText('AL').props.maxFontSizeMultiplier).toBe(1.3);
+    },
+  );
 });

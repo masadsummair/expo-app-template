@@ -7,9 +7,9 @@ const restrictedImports = {
   paths: [
     {
       name: 'react-native',
-      importNames: ['Text', 'TextInput', 'Button'],
+      importNames: ['Text', 'TextInput', 'Button', 'Pressable'],
       message:
-        'Use Text, TextField or Button from @/components/ui (tokens, testID, accessibility).',
+        '[design.ui-primitives] Use Button, ListItem or Text from @/components/ui (TextField for inputs); for an icon-only or custom surface, use PressableScale with min-h-12 min-w-12 and an accessibility label.',
     },
     {
       name: 'react-native',
@@ -19,7 +19,8 @@ const restrictedImports = {
     {
       name: 'react-native',
       importNames: ['TouchableOpacity', 'TouchableHighlight', 'TouchableWithoutFeedback'],
-      message: 'Use Pressable.',
+      message:
+        '[design.ui-primitives] Use Button, ListItem or PressableScale from @/components/ui.',
     },
     {
       name: 'react',
@@ -73,6 +74,63 @@ const focusedOrSkippedTest = [
   },
 ];
 
+// ---- design.* rules (standards/design.json). Each message starts with the rule id so agents can cite it. ----
+const colourUtilities =
+  'bg|text|border(?:-(?:t|b|l|r|x|y|s|e))?|ring(?:-offset)?|fill|stroke|accent|from|via|to|divide|outline|shadow|decoration|caret';
+const paletteColours =
+  'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose';
+const tokenHint = 'Use a token from src/global.css (bg-primary, text-muted, p-4, text-sm ...).';
+const literalPatterns = [
+  [String.raw`^#[0-9a-fA-F]{3,8}$`, 'No hex colours'],
+  [String.raw`\b(?:rgba?|hsla?)\(`, 'No rgb()/hsl() colours'],
+  [
+    String.raw`\b(?:${colourUtilities})-(?:${paletteColours})-[0-9]{2,3}\b`,
+    'No Tailwind palette colours',
+  ],
+  [String.raw`\b(?:${colourUtilities})-(?:white|black)\b`, 'No white/black utilities'],
+  [String.raw`\b[a-z][a-z0-9-]*-\[[^\]\s]+\]`, 'No arbitrary values'],
+];
+const testIdMessage = '[design.testids] testID must be kebab-case: <screen>-<element>.';
+
+const designSelectors = [
+  ...literalPatterns.flatMap(([regex, what]) =>
+    ['Literal[value=', 'TemplateElement[value.raw='].map((head) => ({
+      selector: `${head}/${regex}/]`,
+      message: `[design.tokens-only] ${what}. ${tokenHint}`,
+    })),
+  ),
+  {
+    selector: 'Property[key.name=/^(?:fontSize|fontFamily)$/]',
+    message:
+      '[design.tokens-only] No hard-coded fontSize/fontFamily. Use a Text variant or a text-* token.',
+  },
+  {
+    selector: "JSXAttribute[name.name='allowFontScaling'] Literal[value=false]",
+    message:
+      '[design.font-scaling] Never disable font scaling. Text caps scaling per role (maxFontSizeMultiplier).',
+  },
+  {
+    selector: "JSXAttribute[name.name='adjustsFontSizeToFit']",
+    message:
+      '[design.font-scaling] Labels wrap, they do not shrink (HIG: reflow). Remove adjustsFontSizeToFit.',
+  },
+  {
+    selector: String.raw`JSXAttribute[name.name='testID'] Literal[value=/^(?![a-z0-9]+(-[a-z0-9]+)*$)/]`,
+    message: testIdMessage,
+  },
+  {
+    selector: String.raw`JSXAttribute[name.name='testID'] TemplateElement[value.raw=/[^a-z0-9-]/]`,
+    message: testIdMessage,
+  },
+  {
+    selector:
+      'JSXOpeningElement[name.name=/^(?:Pressable|PressableScale|Button|TextField|Switch|TextInput)$/]' +
+      ":not(:has(JSXAttribute[name.name='testID'])):not(:has(JSXSpreadAttribute))",
+    message:
+      '[design.testids] Interactive elements need a testID (<screen>-<element>) so e2e tests and agents can select them.',
+  },
+];
+
 export default defineConfig([
   expoConfig,
   {
@@ -116,7 +174,13 @@ export default defineConfig([
       'no-console': ['error', { allow: ['warn', 'error'] }],
       'no-empty': 'error',
       'no-useless-catch': 'error',
-      'no-restricted-syntax': ['error', asUnknownAs, recordStringUnknown, indexSignatureUnknown],
+      'no-restricted-syntax': [
+        'error',
+        asUnknownAs,
+        recordStringUnknown,
+        indexSignatureUnknown,
+        ...designSelectors,
+      ],
     },
   },
   {
@@ -130,8 +194,29 @@ export default defineConfig([
     rules: { 'no-restricted-syntax': ['error', ...focusedOrSkippedTest] },
   },
   {
-    // The UI primitives are the one place allowed to wrap React Native's raw components.
+    // The UI kit may wrap React Native's raw components, but imports only @/lib/* and its own folder.
     files: ['src/components/ui/**/*.{ts,tsx}'],
+    ignores: ['src/components/ui/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          // React 19 and storage rules still apply; only the React Native primitives are allowed here.
+          paths: restrictedImports.paths.filter((entry) => entry.name !== 'react-native'),
+          patterns: [
+            {
+              regex: '^(?:@/(?!lib/)|\\.\\./)',
+              message:
+                '[design.ui-primitives] The UI kit imports only from @/lib and its own folder.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Tests inside the kit import test/platform and React Native primitives.
+    files: ['src/components/ui/**/*.test.{ts,tsx}'],
     rules: { 'no-restricted-imports': 'off' },
   },
 ]);

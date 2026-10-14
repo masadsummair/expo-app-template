@@ -8,4 +8,10 @@ describe('Badge', () => {
     expect(screen.queryByText('New')).toBeNull();
     expect(screen.getByText('New', { includeHiddenElements: true })).toBeTruthy();
   });
+
+  it('caps its label at the chrome text scale', async () => {
+    await render(<Badge label="New" testID="row-badge" />);
+    const label = screen.getByText('New', { includeHiddenElements: true });
+    expect(label.props.maxFontSizeMultiplier).toBe(1.3);
+  });
 });

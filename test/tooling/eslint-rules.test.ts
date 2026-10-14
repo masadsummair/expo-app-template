@@ -1,6 +1,6 @@
 // Proves the lint rules fire: a rule that silently checks nothing is worse than no rule.
 // Fixtures are linted as if they were existing project files, so the config block (and TS project) for that path applies.
-import { expect, setDefaultTimeout, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { ESLint, type Linter } from 'eslint';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -78,4 +78,75 @@ test('test files: focused or skipped tests fail, type evasion is allowed', async
     expect(rules(messages)).toEqual(['no-restricted-syntax']);
     expect(messages.map((m) => m.line)).toEqual([2, 3, 4, 5, 6, 7, 8]); // lines 10 and 11 (casts) pass
   }
+});
+
+// design.* cases: the config block of the file a fixture is linted as decides which selectors apply.
+const OUTSIDE_KIT = 'src/components/offline-banner.tsx'; // src/** block, outside the UI kit
+const INSIDE_KIT = 'src/components/ui/card.tsx'; // UI kit block
+const FEATURE_FILE = 'src/components/error-fallback.tsx'; // src/** block, outside the UI kit
+const KIT_TEST_FILE = 'src/components/ui/card.test.tsx'; // test block
+
+const fixtureText = (name: string) =>
+  readFileSync(join(ROOT, 'test/tooling/fixtures', name), 'utf8');
+
+/** `// expect: <id>` must fire on its line; `// expect-none: <id>` must not. */
+function markers(code: string) {
+  return code.split('\n').flatMap((text, index) => {
+    const must = text.match(/\/\/ expect: (design\.[\w-]+)/)?.[1];
+    const mustNot = text.match(/\/\/ expect-none: (design\.[\w-]+)/)?.[1];
+    return [
+      ...(must ? [{ line: index + 1, id: must, fires: true }] : []),
+      ...(mustNot ? [{ line: index + 1, id: mustNot, fires: false }] : []),
+    ];
+  });
+}
+
+const fires = (messages: Linter.LintMessage[], line: number, id: string) =>
+  messages.some((m) => m.line === line && m.message.includes(`[${id}]`));
+const designMessages = (messages: Linter.LintMessage[]) =>
+  messages.filter((m) => m.message.includes('[design.'));
+
+describe('design rules', () => {
+  test('flag every marked line in the bad fixture', async () => {
+    const messages = await lint('design-bad.tsx', OUTSIDE_KIT);
+    const expected = markers(fixtureText('design-bad.tsx'));
+    expect(expected.length).toBeGreaterThanOrEqual(15);
+    for (const { line, id } of expected) expect(fires(messages, line, id)).toBe(true);
+    for (const id of [
+      'design.tokens-only',
+      'design.ui-primitives',
+      'design.testids',
+      'design.font-scaling',
+    ]) {
+      expect(expected.some((m) => m.id === id)).toBe(true);
+    }
+  });
+
+  test('point the Pressable ban at a control that exists: kit controls, or PressableScale for icon-only', async () => {
+    const messages = await lint('design-bad.tsx', OUTSIDE_KIT);
+    const message = messages.find(
+      (m) => m.line === 4 && m.message.includes('[design.ui-primitives]'),
+    )?.message;
+    expect(message).toContain('Button, ListItem or Text');
+    expect(message).toContain('PressableScale with min-h-12 min-w-12');
+    expect(message).not.toContain('platform press feedback'); // PressableScale has no ripple
+  });
+
+  test('restrict the UI kit to @/lib and its own folder, but allow raw Pressable there', async () => {
+    const messages = await lint('design-bad-ui.tsx', INSIDE_KIT);
+    for (const { line, id, fires: expected } of markers(fixtureText('design-bad-ui.tsx'))) {
+      expect(fires(messages, line, id)).toBe(expected);
+    }
+  });
+
+  test('stay silent on token classes, UI kit components and kebab-case testIDs', async () => {
+    expect(designMessages(await lint('design-good.tsx', FEATURE_FILE))).toEqual([]);
+  });
+
+  test('exempt test files', async () => {
+    const [result] = await eslint.lintText("export const swatch = '#ff0000';\n", {
+      filePath: join(ROOT, KIT_TEST_FILE),
+    });
+    expect(designMessages(result?.messages ?? [])).toEqual([]);
+  });
 });

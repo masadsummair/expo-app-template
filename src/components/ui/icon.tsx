@@ -21,9 +21,17 @@ export type IconProps = Omit<
   accessibilityLabel?: string;
 };
 
+/** iOS icons beside text grow with it, up to the same 2x as body text. Android icons keep their size. */
+const MAX_ICON_SCALE = 2;
+
 /*
  * Accessibility lives on a wrapping View: expo-symbols on Android (SDK 57) drops a11y props on the
  * glyph it renders, so labelling the SymbolView itself would only work on iOS.
+ *
+ * Scaling: iOS draws the SF Symbol into its frame and does not follow Dynamic Type (expo-symbols renders a
+ * UIImageView with a fixed point size), so the frame is scaled here. Android draws a font glyph that the
+ * system text scale grows, non-linearly on Android 14+: at font scale 2 a 24dp glyph filled only ~61% of a
+ * 2x box (API 36 emulator). So Android divides the scale back out and pins the box: icons keep their size.
  */
 export function Icon({
   name,
@@ -35,9 +43,8 @@ export function Icon({
 }: IconProps) {
   const labelled = Boolean(accessibilityLabel);
   const { fontScale } = useWindowDimensions();
-  // Android draws symbols as font glyphs, which the system text-size setting scales inside a fixed
-  // box (clipping them at large text). Divide it back out and pin the box so icons keep their size.
-  const androidGlyph = Platform.OS === 'android' && fontScale !== 1;
+  const box = size * Math.min(fontScale, MAX_ICON_SCALE);
+  const android = Platform.OS === 'android';
   return (
     <View
       testID={testID}
@@ -49,8 +56,8 @@ export function Icon({
     >
       <UniwindSymbolView
         name={name}
-        size={androidGlyph ? size / fontScale : size}
-        style={androidGlyph ? { width: size, height: size } : undefined}
+        size={android ? size / fontScale : box}
+        style={android ? { width: size, height: size } : undefined}
         tintColorClassName={colorClassName}
         accessible={false}
         importantForAccessibility="no-hide-descendants"

@@ -1,9 +1,10 @@
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 
 import { cn } from '@/lib/cn';
 
 import { Icon, type IconName } from './icon';
 import { Text } from './text';
+import { useRipple } from './tokens';
 
 const chevron: IconName = { ios: 'chevron.right', android: 'chevron_right' };
 
@@ -23,6 +24,7 @@ export type ListItemProps = ListItemBaseProps &
   );
 
 export function ListItem({ title, subtitle, icon, className, ...rest }: ListItemProps) {
+  const ripple = useRipple();
   const content = (
     <>
       {icon ? <Icon name={icon} colorClassName="accent-muted" /> : null}
@@ -49,13 +51,21 @@ export function ListItem({ title, subtitle, icon, className, ...rest }: ListItem
       accessibilityRole="button"
       accessibilityLabel={subtitle ? `${title}, ${subtitle}` : title}
       accessibilityState={{ disabled: Boolean(disabled) }}
+      android_ripple={ripple}
       disabled={disabled}
       onPress={onPress}
-      className={cn(rowClass, 'active:opacity-80', disabled && 'opacity-50')}
+      className={cn(
+        rowClass,
+        // iOS highlights the pressed row; Android shows the bounded ripple (Card clips it to its corners).
+        Platform.OS === 'ios' && 'active:bg-ripple',
+        disabled && 'opacity-disabled',
+      )}
       testID={testID}
     >
       {content}
-      <Icon name={chevron} size={16} colorClassName="accent-muted" testID={`${testID}-chevron`} />
+      {Platform.OS === 'ios' ? (
+        <Icon name={chevron} size={16} colorClassName="accent-muted" testID={`${testID}-chevron`} />
+      ) : null}
     </Pressable>
   );
 }

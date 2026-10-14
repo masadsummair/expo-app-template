@@ -1,24 +1,34 @@
-import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
+import { Platform, Text as RNText, type TextProps as RNTextProps } from 'react-native';
 
 import { cn } from '@/lib/cn';
 
 const variants = {
   title: 'text-3xl font-bold text-foreground',
   heading: 'text-xl font-semibold text-foreground',
-  body: 'text-base text-foreground',
+  // text-body: 17pt on iOS, 16sp on Android (@variant ios / android in src/global.css).
+  body: 'text-body text-foreground',
   caption: 'text-sm text-muted',
+  // Fixed-size chrome (badges, tab labels): it sits in a box that cannot grow.
+  chrome: 'text-xs text-foreground',
 } as const;
 
 /*
- * Cap dynamic type so layouts survive the largest accessibility sizes. Large text already
- * grows a lot in absolute terms, so headings get a tighter cap than body copy.
+ * The largest system text scale each role follows (maxFontSizeMultiplier). iOS body is uncapped: Dynamic Type
+ * reaches ~3.6x at AX5 and a cap locks those users out. Android's system maximum is 2x. Headings are already
+ * large, and chrome cannot grow without breaking its box. Exported for TextField, which is body text.
  */
-const maxFontScale = {
-  title: 1.5,
-  heading: 1.5,
-  body: 2,
-  caption: 2,
-} as const satisfies Record<keyof typeof variants, number>;
+export function maxFontScale(variant: keyof typeof variants): number | undefined {
+  switch (variant) {
+    case 'title':
+    case 'heading':
+      return 1.5;
+    case 'chrome':
+      return 1.3;
+    case 'body':
+    case 'caption':
+      return Platform.select<number | undefined>({ ios: undefined, default: 2 });
+  }
+}
 
 export type TextProps = RNTextProps & {
   variant?: keyof typeof variants;
@@ -31,7 +41,7 @@ export function Text({ variant = 'body', className, ...props }: TextProps) {
     <RNText
       accessibilityRole={isHeading ? 'header' : undefined}
       allowFontScaling
-      maxFontSizeMultiplier={maxFontScale[variant]}
+      maxFontSizeMultiplier={maxFontScale(variant)}
       className={cn(variants[variant], className)}
       {...props}
     />

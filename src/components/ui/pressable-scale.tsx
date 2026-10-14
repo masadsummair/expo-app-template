@@ -13,19 +13,20 @@ export type PressableScaleProps = Omit<PressableProps, 'children' | 'style'> & {
   testID: string;
   /** Required: what the whole pressable surface does, read by screen readers. */
   accessibilityLabel: string;
+  /** Light haptic tap on press. Off by default (haptics mark outcomes, not taps). */
   haptic?: boolean;
 };
 
 /**
  * Opt-in press feedback for cards and rows: a subtle UI-thread spring scale, identical on iOS and
- * Android, and skipped automatically when the system "reduce motion" setting is on. Buttons keep
- * the simpler opacity press (see Button). `className` lands on the pressable itself, so padding
+ * Android, and skipped automatically when the system "reduce motion" setting is on. Buttons use
+ * platform press feedback (see Button). `className` lands on the pressable itself, so padding
  * and min-h are tappable and the scale matches the touch region.
  */
 export function PressableScale({
   children,
   className,
-  haptic = true,
+  haptic = false,
   onPress,
   onPressIn,
   onPressOut,

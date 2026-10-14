@@ -3,3 +3,4 @@
 export const withUniwind = <T>(component: T): T => component;
 export const useCSSVariable = (): undefined => undefined;
 export const Uniwind = { setTheme: jest.fn() };
+export const useResolveClassNames = (): Record<string, never> => ({});

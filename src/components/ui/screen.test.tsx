@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
+import { resetPlatform, setPlatform } from '../../../test/platform';
 import { BottomBannerHeightContext, Screen } from './screen';
 
 jest.mock('react-native-keyboard-controller', () =>
@@ -10,6 +11,8 @@ jest.mock('react-native-safe-area-context', () => ({
   // Landscape-style insets: a cutout on the left and the nav bar on the right.
   useSafeAreaInsets: () => ({ top: 24, bottom: 20, left: 47, right: 32 }),
 }));
+
+afterEach(resetPlatform);
 
 describe('Screen', () => {
   it('always pads the side insets, even when edges only lists the bottom', async () => {
@@ -45,5 +48,22 @@ describe('Screen', () => {
       </BottomBannerHeightContext>,
     );
     expect(screen.getByTestId('s')).toHaveStyle({ paddingBottom: 0 });
+  });
+
+  it('iOS drags the keyboard down with the finger; Android does not drag-dismiss', async () => {
+    setPlatform('ios');
+    await render(
+      <Screen testID="s" preset="scroll">
+        <Text>body</Text>
+      </Screen>,
+    );
+    expect(screen.getByTestId('s-scroll').props.keyboardDismissMode).toBe('interactive');
+    setPlatform('android');
+    await render(
+      <Screen testID="t" preset="scroll">
+        <Text>body</Text>
+      </Screen>,
+    );
+    expect(screen.getByTestId('t-scroll').props.keyboardDismissMode).toBe('none');
   });
 });

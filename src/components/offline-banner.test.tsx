@@ -33,4 +33,12 @@ describe('OfflineBanner', () => {
     await fireEvent(banner, 'layout', { nativeEvent: { layout: { height: 80 } } });
     expect(onHeightChange).toHaveBeenLastCalledWith(80);
   });
+
+  it('uses the warning foreground token for its text', async () => {
+    mockedOnline.mockReturnValue(false);
+    await render(<OfflineBanner onHeightChange={jest.fn()} />);
+    expect(screen.getByText(/You are offline/).props.className).toContain(
+      'text-warning-foreground',
+    );
+  });
 });

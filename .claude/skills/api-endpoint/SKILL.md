@@ -131,7 +131,7 @@ export default function OrdersScreen() {
   const { data, error, isError, isRefetching, refetch } = useQuery(ordersQuery());
 
   return (
-    <Screen testID="orders-screen" edges={['bottom']}>
+    <Screen testID="orders-screen" edges={[]}>
       <Stack.Screen options={{ title: 'Orders' }} />
       {data ? (
         <RefreshableList
@@ -169,6 +169,8 @@ export default function OrdersScreen() {
   );
 }
 ```
+
+RefreshableList pads the bottom safe-area inset itself, so list screens use edges={[]}.
 
 - **Refresh spinner:** `refreshing={isRefetching}`, never `isFetching` (it is also true on the first load, so the
   pull-to-refresh spinner would show over the `LoadingView`).

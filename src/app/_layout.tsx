@@ -12,12 +12,13 @@ import { useEffect, useState } from 'react';
 import { type ColorValue, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { Toaster } from 'sonner-native';
 import { useCSSVariable } from 'uniwind';
 
+import { AppToaster } from '@/components/app-toaster';
 import { env } from '@/config/env';
 import { useUpdateCheck } from '@/hooks/use-update-check';
 import { initCrashReporting } from '@/lib/crash-reporting';
+import { hasLiquidGlass } from '@/lib/platform';
 import { preloadIconFont } from '@/lib/icon-font';
 import { queryClient } from '@/lib/query-client';
 import { toast } from '@/lib/toast';
@@ -52,7 +53,10 @@ function RootLayout() {
     colors: {
       ...baseTheme.colors,
       background: color(background, baseTheme.colors.background),
-      card: color(colorScheme === 'dark' ? surface : background, baseTheme.colors.card),
+      // iOS 26: a transparent card avoids the flat opaque header bar.
+      card: hasLiquidGlass()
+        ? 'transparent'
+        : color(colorScheme === 'dark' ? surface : background, baseTheme.colors.card),
       text: color(foreground, baseTheme.colors.text),
       border: color(divider, baseTheme.colors.border),
       primary: color(primary, baseTheme.colors.primary),
@@ -103,12 +107,7 @@ function RootLayout() {
                 <Stack.Screen name="sign-in" />
               </Stack.Protected>
             </Stack>
-            <Toaster
-              position="top-center"
-              theme={colorScheme === 'dark' ? 'dark' : 'light'}
-              closeButton
-              maxFontSizeMultiplier={1.5}
-            />
+            <AppToaster />
             <StatusBar style="auto" />
           </ThemeProvider>
         </KeyboardProvider>
