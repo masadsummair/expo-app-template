@@ -39,6 +39,13 @@
 ## Start a new app
 
 1. **Copy the template** (fresh git history, then your own remote):
+
+   | Variant             | Start with                                                                                 |
+   | ------------------- | ------------------------------------------------------------------------------------------ |
+   | Base (mock sign-in) | `git clone --depth 1 https://github.com/masadsummair/expo-app-template my-app`             |
+   | Supabase auth       | `git clone -b supabase --depth 1 https://github.com/masadsummair/expo-app-template my-app` |
+   | Firebase auth       | `git clone -b firebase --depth 1 https://github.com/masadsummair/expo-app-template my-app` |
+
    ```bash
    git clone --depth 1 https://github.com/masadsummair/expo-app-template my-app
    cd my-app
@@ -46,7 +53,11 @@
    git init
    bun install          # after git init, so it can turn on the pre-commit hook
    ```
+
+   Pick a variant with `-b supabase` or `-b firebase`; the rest of the steps are the same. The variant's own setup guide is in its `docs/auth/` folder.
+
    Create the app's own GitHub repo and push when you're ready.
+
 2. **Rename it.** Without `--write` it only previews the changes; with `--write` it applies them:
    ```bash
    bun run rename --id com.acme.app --name "Acme" --slug acme-app --write
@@ -65,9 +76,13 @@
    - iOS without a Mac: needs a paid Apple Developer Program membership and a registered iPhone. Run
      `bun run eas device:create`, then `bun run eas build --profile development-device --platform ios`, and install it.
      Later sessions only need `bun run start` to serve JS.
-6. **Replace the mock sign-in** in `src/app/sign-in.tsx` with your auth provider. The mock accepts any credentials and
-   refuses production builds. The e2e fixtures (`e2e/support/open-app.ts`) and the agent `context` in `e2e.config.ts`
-   depend on the testIDs `sign-in-screen`, `home-screen` and `home-sign-out`: update them with the new auth and Home.
+6. **Replace the mock auth** with your provider: implement `AuthProvider` (`src/services/auth/types.ts`) and point
+   `authProvider` in `src/services/auth/index.ts` at it. The mock (`src/services/auth/mock.ts`) accepts any credentials
+   and refuses production builds; `src/app/sign-in.tsx` is its dev and e2e form. Change that form too: it calls the
+   mock directly, so swapping `index.ts` alone leaves it signing in to the mock. Google and Apple setup:
+   `docs/auth/google-setup.md`, `docs/auth/apple-setup.md`. The e2e fixtures (`e2e/support/open-app.ts`) and the agent
+   `context` in `e2e.config.ts` depend on the testIDs `sign-in-screen`, `home-screen` and `home-sign-out`: update them
+   with the new auth and Home. `sign-in-google` and `sign-in-apple` are reserved for the provider buttons.
 7. **Crash reporting (optional):** set `EXPO_PUBLIC_SENTRY_DSN`, plus `SENTRY_ORG`, `SENTRY_PROJECT` and
    `SENTRY_AUTH_TOKEN` as EAS environment variables for source-map upload. Until then builds still pass, because
    `eas.json` sets `SENTRY_ALLOW_FAILURE=true`. Remove it once Sentry works, so a failed upload fails the release build.

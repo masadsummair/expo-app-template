@@ -86,7 +86,8 @@ hook can run. Each hook explains its denial when it fires; this is the full cata
   logins), recursive grep/rg/`git grep` that would sweep `.env`, including an rg `-g` glob that matches it (pass
   `--exclude='.env*'` or `-g '!.env*'`, or search a subfolder), jest/eslint flags that load other files (`--config`, `--globalSetup`...), eslint `--init`, `--mcp`, `--inspect-config`, `--flag`, `ESLINT_FLAGS` and `ESLINT_USE_FLAT_CONFIG` (they fetch packages or load a nested or legacy config), env dumps and secret env reads
   (also `Env:`, `[Environment]::GetEnvironmentVariable`, `iex`), EAS and GitHub token reads, `e2e --config` and `e2e feedback`,
-  recursive deletes of home or the project, commits on protected branches, `git commit --no-verify` / `-n` and force pushes to `main`.
+  recursive deletes of home or the project, commits on protected branches (`main`, `master`, `develop`, `staging`,
+  `production`, `supabase`, `firebase`), `git commit --no-verify` / `-n` and force pushes to `main`.
   `git … --output` counts as a write and is denied for protected files. It asks before `git push`, `gh pr merge`,
   `e2e login|logout`, EAS submit, update, channel, credentials, env writes and production builds (or a build with no
   `--profile`). It parses pipes, `$()`, `bash -c` and `eval`, and checks shell write targets.

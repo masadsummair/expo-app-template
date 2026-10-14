@@ -1,90 +1,86 @@
-import { waitFor } from '@testing-library/react-native';
-import * as SecureStore from 'expo-secure-store';
-import { AppState } from 'react-native';
+import { reportError, setCrashUser } from '@/lib/crash-reporting';
+import { authProvider } from '@/services/auth';
+import type { AuthUser } from '@/services/auth/types';
 
 import { useAuthStore } from './auth-store';
 
-// Same in-memory keychain as test/setup.ts, plus the accessibility constant the store passes.
-jest.mock('expo-secure-store', () => {
-  const store = new Map<string, string>();
-  return {
-    AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: 'after-first-unlock-this-device-only',
-    getItemAsync: jest.fn(async (key: string) => store.get(key) ?? null),
-    setItemAsync: jest.fn(async (key: string, value: string) => void store.set(key, value)),
-    deleteItemAsync: jest.fn(async (key: string) => void store.delete(key)),
-  };
-});
+// The provider's own behaviour (keychain, restore, retry) is tested in src/services/auth/mock.test.ts.
+jest.mock('@/lib/crash-reporting', () => ({ reportError: jest.fn(), setCrashUser: jest.fn() }));
+jest.mock('@/services/auth', () => ({
+  authProvider: { onChange: jest.fn(), signOut: jest.fn() },
+}));
 
-const secureStore = jest.mocked(SecureStore);
-const deviceOnly = { keychainAccessible: 'after-first-unlock-this-device-only' };
+const provider = jest.mocked(authProvider);
+const ada: AuthUser = { id: 'u1', email: 'ada@example.com', name: 'Ada' };
 
-let onAppStateChange: (status: string) => void;
-const removeListener = jest.fn();
+let emit: (user: AuthUser | null) => void;
+const unsubscribe = jest.fn();
 
-beforeEach(async () => {
-  removeListener.mockClear();
-  jest.spyOn(AppState, 'addEventListener').mockImplementation(((_: string, listener: never) => {
-    onAppStateChange = listener;
-    return { remove: removeListener };
-  }) as never);
-  // The failure-path tests report errors on purpose; keep the test output clean.
-  jest.spyOn(console, 'error').mockImplementation(() => {});
-  await useAuthStore.getState().signOut();
-  useAuthStore.setState({ status: 'loading' });
+beforeEach(() => {
+  jest.clearAllMocks();
+  provider.onChange.mockImplementation((listener) => {
+    emit = listener;
+    return unsubscribe;
+  });
+  provider.signOut.mockResolvedValue(undefined);
+  useAuthStore.setState({ status: 'loading', user: null });
 });
 
 describe('auth store', () => {
-  it('hydrates signed-in from a stored token', async () => {
-    await SecureStore.setItemAsync('auth.token', 'stored');
-    await useAuthStore.getState().hydrate();
-    expect(useAuthStore.getState()).toMatchObject({ status: 'signed-in', token: 'stored' });
+  it('starts loading and holds no token', () => {
+    expect(useAuthStore.getState()).toMatchObject({ status: 'loading', user: null });
+    expect(Object.keys(useAuthStore.getState())).not.toContain('token');
   });
 
-  it('falls back to signed-out when the keychain read fails, then reads again on the next foreground', async () => {
-    await SecureStore.setItemAsync('auth.token', 'stored');
-    secureStore.getItemAsync.mockRejectedValueOnce(new Error('keychain locked'));
-    await useAuthStore.getState().hydrate();
-    expect(useAuthStore.getState()).toMatchObject({ status: 'signed-out', token: null });
-
-    onAppStateChange('active');
-    await waitFor(() => expect(useAuthStore.getState().status).toBe('signed-in'));
-    expect(useAuthStore.getState().token).toBe('stored');
+  it('follows the provider from signed in to signed out', () => {
+    useAuthStore.getState().connect();
+    emit(ada);
+    expect(useAuthStore.getState()).toMatchObject({ status: 'signed-in', user: ada });
+    emit(null);
+    expect(useAuthStore.getState()).toMatchObject({ status: 'signed-out', user: null });
   });
 
-  it('does not overwrite a session started after a failed hydrate when the app returns', async () => {
-    secureStore.getItemAsync.mockRejectedValueOnce(new Error('keychain locked'));
-    await useAuthStore.getState().hydrate();
-    await useAuthStore.getState().signIn('fresh');
-    secureStore.getItemAsync.mockClear();
-
-    onAppStateChange('active');
-    expect(secureStore.getItemAsync).not.toHaveBeenCalled();
-    expect(useAuthStore.getState()).toMatchObject({ status: 'signed-in', token: 'fresh' });
+  it('applies a repeated onChange without changing the outcome', () => {
+    useAuthStore.getState().connect();
+    emit(ada);
+    emit(ada);
+    expect(useAuthStore.getState()).toMatchObject({ status: 'signed-in', user: ada });
+    emit(null);
+    emit(null);
+    expect(useAuthStore.getState()).toMatchObject({ status: 'signed-out', user: null });
   });
 
-  it('cancels a pending hydrate retry on sign-out so a token that failed to delete is not read back', async () => {
-    secureStore.getItemAsync.mockRejectedValueOnce(new Error('keychain locked'));
-    await useAuthStore.getState().hydrate();
-    expect(removeListener).not.toHaveBeenCalled();
+  it('gives crash reporting the signed-in user, or null', () => {
+    useAuthStore.getState().connect();
+    emit(ada);
+    expect(setCrashUser).toHaveBeenLastCalledWith(ada);
+    emit(null);
+    expect(setCrashUser).toHaveBeenLastCalledWith(null);
+  });
 
+  it('returns the provider unsubscribe from connect', () => {
+    const stop = useAuthStore.getState().connect();
+    stop();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks the provider to sign out once for concurrent calls', async () => {
+    useAuthStore.setState({ status: 'signed-in', user: ada });
+    await Promise.all([useAuthStore.getState().signOut(), useAuthStore.getState().signOut()]);
+    expect(provider.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing when already signed out', async () => {
+    useAuthStore.setState({ status: 'signed-out', user: null });
     await useAuthStore.getState().signOut();
-    expect(removeListener).toHaveBeenCalledTimes(1);
+    expect(provider.signOut).not.toHaveBeenCalled();
   });
 
-  it('signs out in memory even when the keychain delete fails', async () => {
-    await useAuthStore.getState().signIn('t');
-    secureStore.deleteItemAsync.mockRejectedValueOnce(new Error('keychain locked'));
-    await useAuthStore.getState().signOut();
-    expect(useAuthStore.getState()).toMatchObject({ status: 'signed-out', token: null });
-  });
-
-  it('stores the token only in SecureStore', async () => {
-    await useAuthStore.getState().signIn('secret');
-    expect(secureStore.setItemAsync).toHaveBeenCalledWith('auth.token', 'secret', deviceOnly);
-  });
-
-  it('keeps the token off backups and readable after first unlock', async () => {
-    await useAuthStore.getState().hydrate();
-    expect(secureStore.getItemAsync).toHaveBeenCalledWith('auth.token', deviceOnly);
+  it('reports a provider failure instead of rejecting', async () => {
+    const failure = new Error('network down');
+    provider.signOut.mockRejectedValueOnce(failure);
+    useAuthStore.setState({ status: 'signed-in', user: ada });
+    await expect(useAuthStore.getState().signOut()).resolves.toBeUndefined();
+    expect(reportError).toHaveBeenCalledWith(failure, { where: 'auth.signOut' });
   });
 });

@@ -15,6 +15,12 @@ portrait.
 Needs bun ≥ 1.3.7, Node ≥ 22.12, Git, and Android Studio (or Xcode on a Mac) with an emulator or simulator running.
 Per-OS details: [docs/setup.md](docs/setup.md).
 
+| Variant             | Start with                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------ |
+| Base (mock sign-in) | `git clone --depth 1 https://github.com/masadsummair/expo-app-template my-app`             |
+| Supabase auth       | `git clone -b supabase --depth 1 https://github.com/masadsummair/expo-app-template my-app` |
+| Firebase auth       | `git clone -b firebase --depth 1 https://github.com/masadsummair/expo-app-template my-app` |
+
 ```bash
 git clone --depth 1 https://github.com/masadsummair/expo-app-template my-app
 cd my-app
@@ -74,6 +80,8 @@ up Sentry (step 7).
 | [docs/ai-kit.md](docs/ai-kit.md)       | AI tool support, the feature workflow, skills, subagents, hooks, MCP servers          |
 | [docs/testing.md](docs/testing.md)     | pre-commit checks, e2e tests, AI steps on a subscription, optional CI                 |
 | [docs/release.md](docs/release.md)     | builds, OTA updates, env vars, SDK upgrades, keeping the template current             |
+| [docs/auth/](docs/auth)                | Google and Apple sign-in setup guides                                                 |
+| [docs/patterns/](docs/patterns)        | optional-feature pattern docs: read one before building what it covers                |
 | [AGENTS.md](AGENTS.md)                 | the rules every agent follows                                                         |
 | [docs/standards.md](docs/standards.md) | the project's goals, non-goals and rules with IDs (generated from `standards/*.json`) |
 | [docs/adr/](docs/adr)                  | architecture decision records                                                         |

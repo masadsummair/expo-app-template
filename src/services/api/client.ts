@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import { env } from '@/config/env';
-import { useAuthStore } from '@/stores/auth-store';
+import { authProvider } from '@/services/auth';
 
 import { ApiError, problemFromError, problemFromStatus, type ApiResult } from './api-problem';
 
@@ -36,10 +36,11 @@ const safeDecode = (segment: string) => {
  * prefix, so the bearer token can never be sent to another host (e.g. a `//evil.com` or
  * `@evil.com` path) or endpoint (a `..` segment) built from a deep-link param. Escape dynamic
  * segments with `encodeURIComponent`, which keeps a `/` inside one segment but leaves a bare `..`.
+ * The errors leave the path out: they reach Sentry, and a path can carry ids or tokens.
  */
 function apiUrl(path: string): string {
   if (!path.startsWith('/') || path.startsWith('//')) {
-    throw new Error(`API path must start with a single "/": ${path}`);
+    throw new Error('API path must start with a single "/"');
   }
   // URL drops tabs and newlines before resolving, so `.\t.` is a `..` segment too.
   const segments = path
@@ -47,11 +48,11 @@ function apiUrl(path: string): string {
     .replace(/[?#].*/s, '')
     .split(/[/\\]/);
   if (segments.some((s) => ['.', '..'].includes(safeDecode(s)))) {
-    throw new Error(`API path must not contain "." or ".." segments: ${path}`);
+    throw new Error('API path must not contain "." or ".." segments');
   }
   const url = new URL(env.API_URL.replace(/\/$/, '') + path);
   if (url.origin !== API_ORIGIN || !url.pathname.startsWith(`${API_PREFIX}/`)) {
-    throw new Error(`API path escapes the API origin or prefix: ${path}`);
+    throw new Error('API path escapes the API origin or prefix');
   }
   return url.toString();
 }
@@ -69,9 +70,12 @@ export async function request<S extends z.ZodType>({
 }: RequestOptions<S>): Promise<ApiResult<z.infer<S>>> {
   const url = apiUrl(path);
   const payload = body === undefined ? undefined : JSON.stringify(body);
-  const token = useAuthStore.getState().token;
   let response: Response;
   try {
+    // Asked per request, never cached: the provider refreshes an expiring token. Only this API's origin
+    // gets it (apiUrl above), so a 401 here is the app's own API refusing the session. A failed read
+    // lands in the catch as a retryable cannot-connect: it must not look like a 401 and sign the user out.
+    const token = await authProvider.getAccessToken();
     response = await fetch(url, {
       method,
       headers: {

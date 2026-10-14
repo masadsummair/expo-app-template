@@ -15,7 +15,7 @@ The question is never "how do I hide it" but "does this value belong on the devi
 | Publishable: API base URL, Sentry DSN, analytics write key, Stripe/Supabase publishable or anon key, feature flag | `EXPO_PUBLIC_*` (this skill, steps 2–5) |
 | Build-job credential: `SENTRY_AUTH_TOKEN`, private npm token, signing material | EAS variable, visibility `secret`, **no** `EXPO_PUBLIC_` prefix. Used by the build, never by app code |
 | True secret: third-party API secret, service-role key, OAuth client secret, push access token | Your server. The app calls your API; the server holds the secret. Never in the bundle, never in `app.config.ts` `extra` |
-| User session token | `expo-secure-store` at runtime (`src/stores/auth-store.ts`), never an env var |
+| User session token | `expo-secure-store` at runtime, owned by the auth provider (`src/services/auth`), never an env var |
 
 If a value is in the third or fourth row, stop and propose a server endpoint (`api-endpoint` skill) instead.
 

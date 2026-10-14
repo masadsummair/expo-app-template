@@ -33,7 +33,7 @@ applyStoredTheme();
 function RootLayout() {
   const colorScheme = useColorScheme();
   const status = useAuthStore((s) => s.status);
-  const hydrate = useAuthStore((s) => s.hydrate);
+  const connect = useAuthStore((s) => s.connect);
   const { updateReady, reload } = useUpdateCheck();
   const [iconsReady, setIconsReady] = useState(false);
   const [background, surface, foreground, divider, primary, danger] = useCSSVariable([
@@ -64,11 +64,13 @@ function RootLayout() {
     },
   };
 
+  // Follow the auth provider: it reports the restored session once, then every change.
+  useEffect(() => connect(), [connect]);
+
   useEffect(() => {
-    void hydrate();
     // Android icons are font glyphs: load the font behind the splash so no icon renders empty.
     void preloadIconFont().finally(() => setIconsReady(true));
-  }, [hydrate]);
+  }, []);
 
   // The root view colour shows during screen transitions and keyboard animations: match the theme.
   useEffect(() => {

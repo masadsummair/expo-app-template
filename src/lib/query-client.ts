@@ -3,7 +3,10 @@ import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/services/api/api-problem';
 import { useAuthStore } from '@/stores/auth-store';
 
-/** An expired or revoked token signs the user out everywhere, not per screen. */
+/**
+ * An expired or revoked token signs the user out everywhere, not per screen. The store ignores repeats
+ * and a signed-out state, so a burst of 401s (or one that lands after sign-out) signs out once.
+ */
 function handleUnauthorized(error: Error) {
   if (error instanceof ApiError && error.problem.kind === 'unauthorized') {
     void useAuthStore.getState().signOut();
@@ -25,7 +28,8 @@ export const queryClient = new QueryClient({
   },
 });
 
-// Drop every cached response on sign-out so the next account never sees the previous one's data.
+// Drop every cached response when the account changes (sign-out, or a switch with no sign-out between)
+// so the next account never sees the previous one's data.
 useAuthStore.subscribe((state, previous) => {
-  if (previous.status === 'signed-in' && state.status === 'signed-out') queryClient.clear();
+  if (previous.user?.id !== state.user?.id) queryClient.clear();
 });
