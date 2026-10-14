@@ -6,13 +6,29 @@
 |---|---|---|---|
 | Always | bun ≥ 1.3.7, Node ≥ 22.12, Git | same | same, plus Git for Windows (Claude Code uses its bash) |
 | Android | Android Studio + SDK and its JDK | same | same; keep the repo path short (long paths break native builds) |
-| iOS | Xcode ≥ 26.4 (older toolchains fail, see `AGENTS.md` Gotchas) | EAS cloud build only | EAS cloud build only |
+| iOS | Xcode ≥ 26.4 (older toolchains fail, see "Known build failures" in the `release` skill) | EAS cloud build only | EAS cloud build only |
 | `ANDROID_HOME` | `~/Library/Android/sdk` | `~/Android/Sdk` | `%LOCALAPPDATA%\Android\Sdk` |
 | `JAVA_HOME` | `/Applications/Android Studio.app/Contents/jbr/Contents/Home` | Android Studio's `jbr` folder | `C:\Program Files\Android\Android Studio\jbr` |
 | e2e tests | iOS and Android | Android | inside WSL2 (upstream: "On Windows, run inside WSL") |
 
 `.node-version` pins Node 24. Shell snippets in the skills are bash; in PowerShell write `$env:NAME = 'x'` instead of
 `NAME=x cmd`.
+
+## Host OS support
+
+| Host OS | Run the app | iOS build | Android build | e2e + `e2e` MCP |
+|---|---|---|---|---|
+| macOS | iOS simulator, Android | local (Xcode) or EAS | local or EAS | iOS and Android |
+| Linux | Android | EAS cloud only | local or EAS | Android |
+| Windows | Android | EAS cloud only | local or EAS | WSL2 only (upstream: "run inside WSL") |
+
+- `bun run ios`, `xcrun`, `xed` and `pod` need macOS; elsewhere build iOS on EAS
+  (`bun run eas build --profile development-device --platform ios`; always pass `--profile`, the default is production).
+  Android needs a JDK (Android Studio's works) and `ANDROID_HOME`; keep the repo path short on Windows.
+- Node ≥ 22.12 and bun ≥ 1.3.7 (`engines`); `.node-version` pins Node 24. Claude hooks run on bun: no `jq`, no bash.
+- Verified on macOS (iOS simulator, Android emulator); the checks have also passed on Windows and Linux. There is no
+  CI/CD (add your own if you want it): `.githooks/pre-commit` runs `bun run verify` before every commit (`bun install`
+  enables it). Run `bun run doctor` and the e2e suite yourself before a release.
 
 **Accounts**
 
@@ -58,3 +74,14 @@
 8. **First prompt:** open the project in your agent and start with `/new-feature add a profile edit screen` (Claude
    Code). In other tools: "Read AGENTS.md, then read `.claude/skills/new-feature/SKILL.md` and follow it for: add a
    profile edit screen." The spec it writes follows `specs/_template.md`.
+
+## Removing the example screens
+
+Typed routes are generated into `.expo/types` only while `expo start` runs, and Expo SDK 57 has no command that
+generates them alone. A fresh clone and `typecheck` therefore do not validate `router.push`, `href` or `Stack.Screen`
+names, so after deleting or renaming a route grep for its path. To delete the example screens:
+
+1. Remove `settings.tsx` and `about.tsx`, and their entries under `src/app/(app)/`.
+2. Remove their `Stack.Screen` lines in `_layout.tsx` and every `router.push` or `Link` that points at them.
+3. Remove their Jest and e2e tests, and the README mentions.
+4. Run `bun run start` once so the types regenerate, then `bun run typecheck`.

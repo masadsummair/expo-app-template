@@ -108,13 +108,14 @@ Force-stop and relaunch the app after changing size or density (see "When it fai
 ## When it fails
 
 1. Read `.e2e/failures/*.md` first (the markdown reporter), then re-run with `--debug` for timings.
-2. Dev build, Android: the emulator cannot reach the host LAN IP, so Metro goes through `adb reverse tcp:8081 tcp:8081`. expo-dev-launcher ignores `--initialUrl`, so `openApp` connects with `device.openLink(exp+expo-app-template://expo-development-client/?url=...)`.
-3. A fresh install shows a one-time "This is the developer menu" sheet. A plain `tap()` on "Continue" is refused ("no parent-owned touch point") because its tappable child is an unnamed button: use a positioned tap, `getByText('Continue').tap({ position: { x: 8, y: 8 } })`. "Continue" sometimes opens the full menu instead; Back is only correct if "Fast Refresh" is visible, otherwise it leaves the app. `openApp` already handles all this, so a failure there means the screen text changed.
+2. Dev build, Android: the emulator cannot reach the host LAN IP, so Metro goes through `adb reverse tcp:8081 tcp:8081`. expo-dev-launcher ignores `--initialUrl`, so `openApp` connects with `device.openLink(exp+expo-app-template://expo-development-client/?url=...)`. A blank emulator screen with "Loading from 192.168.x.x:8081" in logcat is the same cause: run `adb reverse tcp:8081 tcp:8081` and open `http://127.0.0.1:8081`.
+3. A fresh install shows a one-time "This is the developer menu" sheet. A plain `tap()` on "Continue" is refused ("no parent-owned touch point") because its tappable child is an unnamed button: use a positioned tap, `getByText('Continue').tap({ position: { x: 8, y: 8 } })`. "Continue" sometimes opens the full menu instead; Back is only correct if "Fast Refresh" is visible, otherwise it leaves the app. The SDK 57 dev launcher also has a URL field with a Connect button. `openApp` already handles all of this, so a failure there means the screen text changed.
 4. Cold JS load takes 20-60s on an emulator; a timeout on the first wait is usually that, not a bug. Check Metro (`.e2e/logs/metro.log`).
 5. Screenshot shows old UI after a JS change: `agent-device open` does not reload changed JS. Force-stop first
    (`adb shell am force-stop com.example.expoapptemplate.dev`; iOS `xcrun simctl terminate booted com.example.expoapptemplate.dev`), relaunch, then screenshot.
-6. Two sessions on one device: close any MCP session. If an iOS runner wedged, restart the emulator/simulator.
+6. Two sessions on one device ("Device is already in use by session ..."): an interactive (MCP) session still holds the device. Run `bunx --no-install agent-device session list`, then `… close --session <address>`. If an iOS runner wedged, restart the emulator/simulator.
 7. Follow the `debug-rn` skill for the app bug itself; do not retry a red test hoping it goes green.
+8. An iOS test cannot find a testID that is on screen: `accessibilityElementsHidden` (iOS) also hides the element from XCUITest (Android ignores the prop). Use it only on decorative elements no test selects.
 
 ## Known upstream issues (checked 2026-10-06)
 

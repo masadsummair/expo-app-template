@@ -15,17 +15,19 @@ rules, so a rule is never "fixed" by editing it to match code that broke it.
 ## Where you may edit
 
 Only these files, with `Edit` (never `Write`, never create files):
-- `AGENTS.md` — the single source of truth for rules, stack, layout, commands, gotchas and the skills/agents tables.
+- `AGENTS.md` — the single source of truth for rules, stack, layout and commands. It has a size budget (`docs:check` fails when it
+  outgrows it): never add a table or a gotcha; put detail in `docs/` or the owning skill.
 - `README.md` — short human overview: quick start, daily workflow, top commands, "what's inside", docs index.
-- `docs/*.md` — the detail behind it: `setup.md`, `stack.md`, `ai-kit.md`, `testing.md`, `release.md`.
-- `CLAUDE.md` — Claude Code specifics only (hooks, MCP servers, its agents/skills table). It must keep `@AGENTS.md` as
+- `docs/*.md` — the detail behind it: `setup.md`, `stack.md`, `ai-kit.md`, `testing.md`, `release.md`. Never edit
+  `docs/standards.md`: it is generated (`bun run standards:gen`).
+- `CLAUDE.md` — Claude Code specifics only (MCP servers and Claude-only skills; the hook catalogue is in `docs/ai-kit.md`). It must keep `@AGENTS.md` as
   its first line. Never copy a rule from `AGENTS.md` into it.
 - `.claude/skills/SOURCES.md` — only the sentence listing skills "authored for this template" and the vendored table
   when a skill was added or removed. Never touch the "Local modifications" list.
 
 Never edit a vendored skill (`.claude/skills/<expo-*|eas-*|react-native-*>`), anything in `.claude/hooks`,
 `.claude/settings*.json`, `.mcp.json`, `package.json`, or the text between `BEGIN upstream` / `END upstream` in
-`AGENTS.md` (the only intended change there is `npx` rewritten to `bunx`). You have `Bash` to run checks, not to edit files.
+`AGENTS.md` (condensed from upstream, with `npx` rewritten to `bunx`). You have `Bash` to run checks, not to edit files.
 If a hook blocks a Bash call, do not work around it: report the command and the message.
 
 ## Procedure
@@ -37,7 +39,7 @@ If a hook blocks a Bash call, do not work around it: report the command and the 
    ```
    `check-docs` covers: every `bun run <name>` in docs and skills exists in `package.json`; backtick paths and the
    `## Layout` block exist on disk (generated or gitignored ones are allowlisted in the script); every agent in
-   `.claude/agents` is named in `AGENTS.md`/`CLAUDE.md`; the "N pinned upstream skills" count matches `SOURCES.md`;
+   `.claude/agents` is named in `AGENTS.md`, `CLAUDE.md` or `docs/ai-kit.md`; the "N pinned upstream skills" count matches `SOURCES.md`;
    `CLAUDE.md` starts with `@AGENTS.md`; Expo SDK, React Native, React and Node versions and `EXPO_PUBLIC_*`
    names match `package.json`, `src/config/env.ts` and `.env.example`; scripts nobody documented.
 2. For each finding, decide which side is wrong:
@@ -53,9 +55,9 @@ If a hook blocks a Bash call, do not work around it: report the command and the 
      cloud) and flag macOS-only paths (`JAVA_HOME`, `adb` location). Hooks run on bun, so no `jq`; verify with
      `bun run test:hooks`.
    - The skills and agents tables against each file's `description` frontmatter: the "use for" text must still be what
-     the description says. A new skill or agent needs a row in `AGENTS.md`; Claude-only entries also go in `CLAUDE.md`.
+     the description says. A new agent needs a row in `docs/ai-kit.md`; a new own skill is named in `AGENTS.md`; Claude-only entries also go in `CLAUDE.md`.
    - `SOURCES.md`: the "authored for this template" sentence lists every non-vendored skill folder.
-   - Gotchas in `AGENTS.md` that no longer hold (a fixed toolchain issue, a removed tool). Remove only when you can show
+   - Gotchas in the `release`, `e2e-flow` and `debug-rn` skills that no longer hold (a fixed toolchain issue, a removed tool). Remove only when you can show
      it no longer applies; otherwise leave it.
    - The Stack line against `package.json` (a library added or removed, which the script cannot see).
 4. Edit with the smallest change that makes the sentence true. Keep the existing tone, tables and wording.
