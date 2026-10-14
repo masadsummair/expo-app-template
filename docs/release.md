@@ -16,6 +16,7 @@ pre-approved and always prompt. Android release builds are minified with R8: re-
 
 ## Keeping the template current
 
+- **Variant branches:** merge `main` into `supabase` and `firebase` the same day `main` changes, through `sync/main-into-<variant>` PRs. Never merge a variant into `main`. Turn on `git config rerere.enabled true` so a resolved conflict is reused. On a `bun.lock` conflict keep the variant's file and run `bun install`; on `.agents/skills` run `bun run skills:sync`.
 - **Expo SDK upgrades:** the `sdk-upgrader` agent (uses the vendored `expo-upgrade` skill), then `bun run doctor`.
 - **Vendored skills:** refresh quarterly; the steps are in `.claude/skills/SOURCES.md`.
 - **Docs drift:** `bun run docs:check` (also in the pre-commit hook); the `docs-keeper` agent fixes it.

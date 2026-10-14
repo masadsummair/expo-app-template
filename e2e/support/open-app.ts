@@ -6,6 +6,13 @@ import { DEV_CLIENT_SCHEME, DEV_SERVER_URL, isReleaseBuild } from './build-mode'
 /** A cold JS bundle load in a dev build takes 20-60s on an emulator. Used for the first wait only. */
 const FIRST_LOAD_MS = isReleaseBuild ? 15_000 : 90_000;
 
+/**
+ * Credentials the `signIn` fixture types into the sign-in form. The defaults are throwaway values the mock accepts,
+ * so a local run needs no setup; an auth variant sets E2E_EMAIL and E2E_PASSWORD for its test user.
+ */
+const E2E_EMAIL = process.env.E2E_EMAIL ?? 'test@example.com';
+const E2E_PASSWORD = process.env.E2E_PASSWORD ?? 'password123';
+
 /** iOS shows its "Save Password?" sheet a moment after a sign-in with a password field. */
 const SAVE_PASSWORD_PROMPT_MS = 8_000;
 
@@ -57,13 +64,14 @@ export const test = base.extend<{ openApp: () => Promise<void>; signIn: () => Pr
     });
   },
   /**
-   * From the sign-in screen: sign in with the mock's demo credentials and land on home. On iOS, dismisses
-   * the system "Save Password?" sheet (Not Now): it covers the app and would swallow the next tap.
+   * From the sign-in screen: sign in with E2E_EMAIL and E2E_PASSWORD (the mock's demo credentials by default)
+   * and land on home. On iOS, dismisses the system "Save Password?" sheet (Not Now): it covers the app and
+   * would swallow the next tap.
    */
   signIn: async ({ screen, platform }, provide) => {
     await provide(async () => {
-      await screen.getByTestId('sign-in-email').fill('test@example.com');
-      await screen.getByTestId('sign-in-password').fill('password123');
+      await screen.getByTestId('sign-in-email').fill(E2E_EMAIL);
+      await screen.getByTestId('sign-in-password').fill(E2E_PASSWORD);
       await screen.getByTestId('sign-in-submit').tap();
 
       // The sheet hides the whole app from the accessibility tree, so dismiss it before asserting home.

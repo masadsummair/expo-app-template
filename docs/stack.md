@@ -46,7 +46,7 @@
 | zod                                     | validates API responses, env vars, forms and persisted state |
 | Zustand                                 | client state (auth, theme)                                   |
 | react-native-mmkv                       | fast local storage for persisted state                       |
-| expo-secure-store                       | the auth token (device-only)                                 |
+| expo-secure-store                       | the session token the auth provider keeps (device-only)      |
 | React Hook Form + `@hookform/resolvers` | forms with zod validation                                    |
 | expo-network                            | online/offline detection and the offline banner              |
 

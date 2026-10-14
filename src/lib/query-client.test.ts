@@ -1,7 +1,20 @@
+import { waitFor } from '@testing-library/react-native';
+
 import { ApiError } from '@/services/api/api-problem';
+import { authProvider } from '@/services/auth';
+import type { MockAuthProvider } from '@/services/auth/mock';
 import { useAuthStore } from '@/stores/auth-store';
 
 import { queryClient, shouldRetry } from './query-client';
+
+// The store follows whatever `@/services/auth` exports, so the test pins it to a mock instance: on an auth
+// variant the real provider sits there, and signing in through the mock module would never reach the store.
+jest.mock('@/services/auth', () => ({
+  authProvider: jest
+    .requireActual<typeof import('@/services/auth/mock')>('@/services/auth/mock')
+    .createMockAuthProvider(),
+}));
+const mockAuthProvider = authProvider as MockAuthProvider;
 
 // Cached queries hold 5-minute garbage-collection timers that keep Jest alive.
 afterEach(() => queryClient.clear());
@@ -28,27 +41,67 @@ describe('defaults', () => {
 });
 
 describe('session handling', () => {
+  let disconnect: () => void;
+
   beforeEach(async () => {
-    await useAuthStore.getState().signIn('token');
+    disconnect = useAuthStore.getState().connect();
+    await mockAuthProvider.signInWithPassword('ada@example.com', 'password123');
+    await waitFor(() => expect(useAuthStore.getState().status).toBe('signed-in'));
   });
 
-  it('signs out when any query fails with unauthorized', async () => {
-    await queryClient
+  afterEach(async () => {
+    disconnect();
+    await mockAuthProvider.signOut();
+    useAuthStore.setState({ status: 'loading', user: null });
+    jest.restoreAllMocks();
+  });
+
+  // Sign-out clears the cache while a query settles, so it schedules its GC timer after leaving the
+  // cache; gcTime 0 stops that timer from keeping Jest alive.
+  const failUnauthorized = (key: string) =>
+    queryClient
       .fetchQuery({
-        queryKey: ['me'],
+        queryKey: [key],
         queryFn: () => Promise.reject(new ApiError({ kind: 'unauthorized' })),
         retry: false,
-        // Sign-out clears the cache while this query settles, so it schedules its GC timer
-        // after leaving the cache; gcTime 0 stops that timer from keeping Jest alive.
         gcTime: 0,
       })
       .catch(() => undefined);
+
+  it('signs out when any query fails with unauthorized', async () => {
+    await failUnauthorized('me');
     expect(useAuthStore.getState().status).toBe('signed-out');
+  });
+
+  it('signs out once when several requests fail with unauthorized together', async () => {
+    const signOut = jest.spyOn(authProvider, 'signOut');
+    await Promise.all([failUnauthorized('a'), failUnauthorized('b'), failUnauthorized('c')]);
+    expect(signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores an unauthorized that arrives after sign-out, so a 401 cannot loop', async () => {
+    await useAuthStore.getState().signOut();
+    const signOut = jest.spyOn(authProvider, 'signOut');
+    await failUnauthorized('late');
+    expect(signOut).not.toHaveBeenCalled();
   });
 
   it('clears cached data on sign-out so the next account cannot see it', async () => {
     queryClient.setQueryData(['orders'], [{ id: 'private' }]);
     await useAuthStore.getState().signOut();
     expect(queryClient.getQueryData(['orders'])).toBeUndefined();
+  });
+
+  it('clears cached data when the account changes with no sign-out in between', () => {
+    queryClient.setQueryData(['orders'], [{ id: 'private' }]);
+    useAuthStore.setState({ status: 'signed-in', user: { id: 'other', email: null, name: null } });
+    expect(queryClient.getQueryData(['orders'])).toBeUndefined();
+  });
+
+  it('keeps cached data when the same account is reported again', () => {
+    queryClient.setQueryData(['orders'], [{ id: 'mine' }]);
+    const user = useAuthStore.getState().user;
+    useAuthStore.setState({ status: 'signed-in', user: user && { ...user } });
+    expect(queryClient.getQueryData(['orders'])).toEqual([{ id: 'mine' }]);
   });
 });

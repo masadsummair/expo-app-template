@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { useAuthStore } from '@/stores/auth-store';
+import { authProvider } from '@/services/auth';
 
 import { ApiError } from './api-problem';
 import { request, requestOrThrow } from './client';
@@ -15,8 +15,8 @@ function jsonResponse(status: number, body?: unknown): Partial<Response> {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
 }
 
-afterEach(async () => {
-  await useAuthStore.getState().signOut();
+afterEach(() => {
+  jest.restoreAllMocks();
 });
 
 describe('request', () => {
@@ -64,12 +64,41 @@ describe('request', () => {
     });
   });
 
-  it('sends the bearer token when signed in', async () => {
-    await useAuthStore.getState().signIn('secret-token');
+  it('sends the provider token as a bearer token', async () => {
+    jest.spyOn(authProvider, 'getAccessToken').mockResolvedValue('secret-token');
     mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));
     await request({ path: '/me', schema: User });
     const [, init] = (globalThis.fetch as jest.Mock).mock.calls[0];
     expect(init.headers.Authorization).toBe('Bearer secret-token');
+  });
+
+  it('sends no Authorization header when signed out', async () => {
+    jest.spyOn(authProvider, 'getAccessToken').mockResolvedValue(null);
+    mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));
+    await request({ path: '/me', schema: User });
+    const [, init] = (globalThis.fetch as jest.Mock).mock.calls[0];
+    expect(init.headers).not.toHaveProperty('Authorization');
+  });
+
+  it('asks the provider for a token on every request, so a refreshed token is used', async () => {
+    const getAccessToken = jest.spyOn(authProvider, 'getAccessToken');
+    getAccessToken.mockResolvedValueOnce('old').mockResolvedValueOnce('new');
+    mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));
+    await request({ path: '/me', schema: User });
+    await request({ path: '/me', schema: User });
+    const sent = (globalThis.fetch as jest.Mock).mock.calls.map(
+      ([, init]) => init.headers.Authorization,
+    );
+    expect(sent).toEqual(['Bearer old', 'Bearer new']);
+  });
+
+  it('returns a problem instead of throwing when the token cannot be read', async () => {
+    jest.spyOn(authProvider, 'getAccessToken').mockRejectedValue(new Error('refresh failed'));
+    mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));
+    const result = await request({ path: '/me', schema: User });
+    // Retryable, and not 'unauthorized': a failed token read must never sign the user out.
+    expect(result).toEqual({ kind: 'cannot-connect', temporary: true });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });
 
@@ -105,8 +134,10 @@ describe('request origin guard', () => {
   it.each(['//evil.com/steal', 'evil.com/x', '@evil.com/x', 'https://evil.com/x'])(
     'refuses %s so the bearer token never leaves the API origin',
     async (path) => {
+      const getAccessToken = jest.spyOn(authProvider, 'getAccessToken');
       mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));
       await expect(request({ path, schema: User })).rejects.toThrow();
+      expect(getAccessToken).not.toHaveBeenCalled();
       expect(globalThis.fetch).not.toHaveBeenCalled();
     },
   );
@@ -124,6 +155,16 @@ describe('request origin guard', () => {
     await expect(request({ path, schema: User })).rejects.toThrow();
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
+
+  it.each(['evil.com/x?access_token=abc', '/orders/../admin?access_token=abc'])(
+    'keeps the refused path %s out of the error message, which reaches Sentry',
+    async (path) => {
+      mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));
+      await expect(request({ path, schema: User })).rejects.toMatchObject({
+        message: expect.not.stringContaining('abc'),
+      });
+    },
+  );
 
   it('lets a literal percent sign through instead of throwing a URIError', async () => {
     mockFetch(async () => jsonResponse(200, { id: '1', name: 'Ada' }));

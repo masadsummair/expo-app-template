@@ -4,9 +4,9 @@ import { View } from 'react-native';
 import { z } from 'zod';
 
 import { Button, FormError, Screen, Text, TextField } from '@/components/ui';
-import { env } from '@/config/env';
 import { reportError } from '@/lib/crash-reporting';
-import { useAuthStore } from '@/stores/auth-store';
+import * as haptics from '@/lib/haptics';
+import { MockAuthRefusedError, mockAuthProvider } from '@/services/auth/mock';
 
 const schema = z.object({
   email: z.email('Enter a valid email'),
@@ -16,7 +16,6 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function SignInScreen() {
-  const signIn = useAuthStore((s) => s.signIn);
   const {
     control,
     handleSubmit,
@@ -28,17 +27,19 @@ export default function SignInScreen() {
     defaultValues: { email: '', password: '' },
   });
 
-  // TODO(auth): replace with your auth provider (Clerk, Supabase, Better Auth, ...).
-  // The mock accepts any credentials, so production builds refuse it. An unset APP_ENV in a release build counts as
-  // production (src/config/env.ts); release builds for e2e set EXPO_PUBLIC_APP_ENV=development explicitly.
-  const onSubmit = async (_values: FormValues) => {
-    if (env.APP_ENV === 'production') {
-      setError('root', { message: 'Sign-in is not configured for this build.' });
-      return;
-    }
+  // The dev and e2e form: the mock accepts any credentials and refuses production builds (see mock.ts).
+  // A real auth variant keeps this form for e2e only and adds its provider buttons here; the testIDs
+  // `sign-in-google` and `sign-in-apple` are reserved for them. The auth store follows the session.
+  const onSubmit = async ({ email, password }: FormValues) => {
     try {
-      await signIn('dev-token');
+      await mockAuthProvider.signInWithPassword(email, password);
+      haptics.success();
     } catch (error) {
+      haptics.error();
+      if (error instanceof MockAuthRefusedError) {
+        setError('root', { message: 'Sign-in is not configured for this build.' });
+        return;
+      }
       // The keychain write can fail (Android Keystore invalidation, locked iOS keychain).
       reportError(error, { where: 'sign-in' });
       setError('root', { message: 'Could not sign you in. Please try again.' });

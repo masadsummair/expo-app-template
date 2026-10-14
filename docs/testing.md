@@ -40,6 +40,9 @@ Tests live in `e2e/*.e2e.ts` (Playwright-style: `screen.getByTestId(...)`, `expe
   with no model key, then write the journey as a deterministic test. It's the mobile equivalent of Claude in Chrome.
 - **Dev vs release builds.** Locally the tests run against your dev build, connected to Metro through the dev-client
   deep link. `E2E_BUILD=release` runs them against a release-style build with no dev launcher.
+- **Sign-in credentials.** The `signIn` fixture in `e2e/support/open-app.ts` types `E2E_EMAIL` and `E2E_PASSWORD`; they
+  default to `test@example.com` and `password123`, which the mock accepts, so a local run needs no setup. The testIDs
+  `sign-in-google` and `sign-in-apple` are reserved for the provider buttons an auth variant adds.
 - **Telemetry is off** (`E2E_TELEMETRY_DISABLED=1` in scripts, MCP configs and Claude settings).
 - **Risk:** e2e is pre-1.0 (Apache-2.0) and pinned exactly. The suite passes on an Android emulator and an iOS 26.2
   simulator. Known upstream issues: [#872](https://github.com/tester-army/e2e/issues/872) (iOS 27 `secureTextEntry`

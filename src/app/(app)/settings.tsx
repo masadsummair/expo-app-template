@@ -4,10 +4,11 @@ import { useWindowDimensions, View } from 'react-native';
 
 import { Button, Card, Divider, ListItem, Screen, Text } from '@/components/ui';
 import { confirm } from '@/lib/confirm';
+import { reportError } from '@/lib/crash-reporting';
 import * as haptics from '@/lib/haptics';
 import { storage } from '@/lib/storage';
 import { toast, toastError } from '@/lib/toast';
-import { deleteAccount } from '@/services/api/account';
+import { authProvider } from '@/services/auth';
 import { useAuthStore } from '@/stores/auth-store';
 import { useThemeStore, type ThemePreference } from '@/stores/theme-store';
 
@@ -28,13 +29,17 @@ export default function SettingsScreen() {
   const stackThemes = fontScale >= STACK_AT_FONT_SCALE;
 
   const removeAccount = useMutation({
-    mutationFn: deleteAccount,
-    onSuccess: async () => {
+    // Asks the provider to delete the account, then signs out, so the auth store has already moved on by onSuccess.
+    mutationFn: () => authProvider.deleteAccount(),
+    onSuccess: () => {
       haptics.success();
       toast.success('Account deleted');
-      // The account is gone: wipe everything stored locally for it, not just the token.
+      // The account is gone: wipe everything stored locally for it, not just the session.
       storage.clearAll();
-      await signOut();
+      // clearAll also drops the pending-wipe flag; signing out again retries the keychain delete and re-arms it on failure.
+      authProvider
+        .signOut()
+        .catch((error: unknown) => reportError(error, { where: 'settings.deleteAccount' }));
     },
     onError: (e) => {
       haptics.error();

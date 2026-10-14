@@ -375,7 +375,8 @@ const CODE_LOADING_FLAGS = new Set([
   'haste',
 ]);
 const EXCLUDE_FLAGS = new Set(['--exclude', '--exclude-dir', '--ignore']);
-const PROTECTED_BRANCH = /^(main|master|develop|staging|production)$/;
+// `supabase` and `firebase` are the long-lived auth variant branches: they change only through PRs.
+const PROTECTED_BRANCH = /^(main|master|develop|staging|production|supabase|firebase)$/;
 const SECRET_NAME = /(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL)/i;
 // Keep in step with the Read deny rules in .claude/settings.json (hooks.test.ts checks it).
 const CREDENTIAL_PATH = new RegExp(

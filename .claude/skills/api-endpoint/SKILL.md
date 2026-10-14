@@ -94,7 +94,7 @@ export function usePayOrder() {
 ```
 
 2. **Consume in the screen** with `useQuery(ordersQuery())` and render all four states (snippet below).
-3. **Auth:** the bearer token is attached automatically from `useAuthStore`. An `unauthorized` problem from
+3. **Auth:** the bearer token is attached automatically: `request()` asks `authProvider.getAccessToken()` per request. An `unauthorized` problem from
    any query or mutation signs the user out centrally (`src/lib/query-client.ts`) and sign-out clears the
    query cache — don't handle 401 per screen.
 4. **Paths:** always start with `/` and wrap every dynamic segment in `encodeURIComponent()` — ids can come

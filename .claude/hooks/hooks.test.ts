@@ -100,13 +100,29 @@ describe('guard-bash: git', () => {
   });
 
   test('commit is denied on protected branches only', () => {
-    for (const branch of ['main', 'master', 'develop', 'staging', 'production']) {
+    for (const branch of [
+      'main',
+      'master',
+      'develop',
+      'staging',
+      'production',
+      'supabase',
+      'firebase',
+    ]) {
       expect(bash('git commit -m x', branch)).toBe('deny');
     }
     expect(bash('git -c user.name=x commit -m x', 'main')).toBe('deny');
     expect(bash('git -C . commit -m x', 'main')).toBe('deny');
     expect(bash('git commit -m x', 'feat/x')).toBe('allow');
     expect(bash('git commit -m x', '')).toBe('allow');
+  });
+
+  test('the variant branches are protected, their sync and feature branches are not', () => {
+    expect(bash('git -C . commit -m x', 'supabase')).toBe('deny');
+    expect(bash('git commit -m x', 'sync/main-into-supabase')).toBe('allow');
+    expect(bash('git commit -m x', 'sync/main-into-firebase')).toBe('allow');
+    expect(bash('git commit -m x', 'feat/firebase-auth')).toBe('allow');
+    expect(bash('git commit -m x', 'supabase-spike')).toBe('allow');
   });
 
   test('commit cannot skip the pre-commit hook', () => {

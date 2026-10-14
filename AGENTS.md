@@ -63,13 +63,14 @@ TypeScript 6 no longer auto-loads `@types/*`: list them in `compilerOptions.type
 
 ```
 src/app/ routes only (signed-in screens sit in its (app) group)   src/components/ui/ primitives   src/components/ app-level
-src/services/api/ client.ts + one file per resource   src/stores/ Zustand   src/lib/ helpers   src/hooks/   src/config/ env.ts, flags.ts
+src/services/api/ client.ts + one file per resource   src/services/auth/ AuthProvider seam (mock.ts, index.ts)   src/stores/ Zustand   src/lib/ helpers   src/hooks/   src/config/ env.ts, flags.ts
 src/global.css design tokens (light + dark)   test/ Jest   e2e/ and e2e.config.ts   specs/ feature specs   scripts/ checks   standards/ rules
 .claude/ skills, agents, hooks   .agents/skills/ generated copy for Codex   docs/ detail   .githooks/ pre-commit
 ```
 
 ## Conventions
 
+- **Pattern docs:** optional features (other sign-in routes, platform-specific UI, storage choices) are docs in `docs/patterns/`, not code. Before writing code for a need one covers, read it and suggest it; apply it only when the user picks it.
 - **Components:** named functions; `ref` as a prop (no `forwardRef`, no `React.FC`); no `useMemo`/`useCallback`/`memo`. Use `@/components/ui`, not raw RN `Text`/`TextInput`/`Button`/`Pressable` (ESLint enforces it).
 - **Styling:** Uniwind `className` + semantic tokens (`bg-surface`, `text-muted`, `bg-primary`); no hex, Tailwind palette colours or arbitrary values (`p-[13px]`). New tokens go in **both** `@variant light` and `@variant dark` in `src/global.css`. Merge with `cn()`.
 - **Lists:** FlashList for unbounded data, never `ScrollView` + `.map`. Stable `keyExtractor`, `getItemType` for mixed rows, no `key` or local state inside rows (they recycle). Images: expo-image with `recyclingKey` and explicit width/height.
@@ -120,7 +121,7 @@ src/global.css design tokens (light + dark)   test/ Jest   e2e/ and e2e.config.t
 ## Env, secrets, releases
 
 - `EXPO_PUBLIC_*` is inlined into the bundle in plain text: publishable values only [core.public-env-only]. Add each variable to `src/config/env.ts` and `.env.example`; `.env` is local only and EAS builds read EAS environment variables.
-- `src/app/sign-in.tsx` is a mock that accepts any credentials and refuses production builds: replace it before release. The e2e fixtures (`e2e/support/open-app.ts`) and the agent `context` in `e2e.config.ts` depend on the testIDs `sign-in-screen`, `home-screen` and `home-sign-out`: update them in the same change.
+- `src/services/auth/mock.ts` accepts any credentials and refuses production builds: implement `AuthProvider` and switch `src/services/auth/index.ts` before release (`src/app/sign-in.tsx` is its dev and e2e form). The e2e fixtures (`e2e/support/open-app.ts`) and the agent `context` in `e2e.config.ts` depend on the testIDs `sign-in-screen`, `home-screen` and `home-sign-out`: update them in the same change.
 - `APP_ENV=development|preview|production` selects bundle ids and names (`app.config.ts`, `eas.json`). OTA uses the `fingerprint` runtimeVersion policy; publish to the channel matching the build profile. The `release` skill owns builds, submits, OTA and rollback.
 
 ## Skills, agents, standards

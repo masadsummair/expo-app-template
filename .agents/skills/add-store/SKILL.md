@@ -1,6 +1,6 @@
 ---
 name: add-store
-description: Add a Zustand store for client-owned state (preferences, onboarding flags, drafts), optionally persisted to MMKV, with tests. Use when asked for global/shared client state or a persisted setting. Do NOT use for server data (use a TanStack Query hook, see api-endpoint), tokens (use the auth-store pattern), or state one screen owns (useState).
+description: Add a Zustand store for client-owned state (preferences, onboarding flags, drafts), optionally persisted to MMKV, with tests. Use when asked for global/shared client state or a persisted setting. Do NOT use for server data (use a TanStack Query hook, see api-endpoint), tokens (the auth provider in src/services/auth owns them), or state one screen owns (useState).
 ---
 
 # Add store
@@ -13,7 +13,7 @@ description: Add a Zustand store for client-owned state (preferences, onboarding
 | Owned by one component or screen | `useState` |
 | Shared across screens, client-owned (theme, onboarding done, draft that survives navigation) | Zustand store (this skill) |
 | Survives app restart, non-sensitive | Zustand + `persist` on MMKV (below) |
-| Token, credential, PII | `expo-secure-store` via the `src/stores/auth-store.ts` pattern. **Never** MMKV |
+| Token, credential, PII | The auth provider (`src/services/auth`) keeps tokens in `expo-secure-store`; `auth-store.ts` holds only status and user. **Never** MMKV |
 
 Never copy server data into a store: it duplicates the Query cache and goes stale.
 
