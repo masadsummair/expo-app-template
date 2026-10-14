@@ -59,7 +59,7 @@ up Sentry (step 7).
   Layouts are checked from a 360dp phone to an 800dp tablet and at large text sizes.
 - **Data:** a typed, cancellable API client, TanStack Query wired to network and app state, persisted Zustand stores,
   and a SecureStore token.
-- **AI kit:** `AGENTS.md` rules, 25 skills, 7 review and test subagents, Claude Code guard hooks, and the `e2e` and
+- **AI kit:** `AGENTS.md` rules, 28 skills, 8 review and test subagents, Claude Code guard hooks, and the `e2e` and
   `expo` MCP servers.
 - **Testing:** Jest + Testing Library, tester-army e2e on device (optional AI steps on your ChatGPT, Copilot, OpenCode
   or SuperGrok subscription), and contrast, privacy-manifest and docs-drift checks.

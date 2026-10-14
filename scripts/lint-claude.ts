@@ -218,6 +218,9 @@ for (const file of agentFiles) {
   if (tools?.includes("Bash") && /review|audit/i.test(`${name}`) && !/read-only git/i.test(fm.body))
     warn(r, 'reviewer/auditor has Bash but no "read-only git commands only" sentence (scoped Bash(...) in `tools` is unsupported)');
 
+  if (typeof name === "string" && name.endsWith("-reviewer") && !/\bREVIEW-COMPLETE\b/.test(fm.body))
+    err(r, "reviewer agents must tell the model to end with the literal line `REVIEW-COMPLETE`; without it a review that never finished looks like a clean one");
+
   if (typeof data.model !== "string") err(r, "missing `model`");
   else if (!AGENT_MODELS.has(data.model) && !/^claude-/.test(data.model)) err(r, `invalid model "${data.model}"`);
   if (data.color !== undefined && !AGENT_COLORS.has(String(data.color))) err(r, `invalid color "${data.color}"`);

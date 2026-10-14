@@ -22,7 +22,7 @@ In Claude Code run `/new-feature <what you want>`.
 1. It writes `specs/<slug>.md` with acceptance criteria (`AC-1`, `AC-2`, ...) and waits for your approval.
 2. It builds with `new-screen`, `new-component`, `add-form`, `add-store` and `api-endpoint`.
 3. It writes unit tests and one e2e test per criterion, then runs `/verify`.
-4. It reviews with `rn-reviewer` and checks the result on a device with `app-tester`.
+4. It reviews with `slop-reviewer` and `adversarial-reviewer` and checks the result on a device with `app-tester`.
 
 Finish with `/ship`, which stops for your approval before the commit and again before the push and pull request. The
 skills also work on their own.
@@ -34,8 +34,10 @@ Authored for this template:
 | Category | Skill | Use it to |
 |---|---|---|
 | Workflow | `new-feature` | ship one feature end to end: spec, plan, code, unit and e2e tests, review, device check |
+| Workflow | `research` | answer a question or vet a dependency with one agent per source; every claim has a source or `UNVERIFIED`; returns a decision record and adds nothing until you approve it |
 | Workflow | `verify` | run every check and report real pass/fail output |
-| Workflow | `ship` | take finished work to a pull request, with approval stops before the commit and the push |
+| Workflow | `ship` | take finished work to a pull request, with approval stops before the commit and the push; needs both reviews on the current diff |
+| Review | `slop-review`, `adversarial-review` | the checklists the two reviewer agents follow (invented code and leftovers; the diff against its spec, constraints, security, React Native and standards); Codex reads them from `.agents/skills` |
 | Build | `new-screen`, `new-component` | add a route or a reusable component with the layout, states, tokens and testIDs |
 | Build | `add-form`, `add-store`, `api-endpoint` | add a validated form, a Zustand store, or a typed API call with TanStack Query |
 | Platform | `env-secrets` | add an environment variable end to end (schema, `.env.example`, EAS visibility) |
@@ -55,7 +57,8 @@ Vendored from upstream and pinned (`.claude/skills/SOURCES.md`; template overrid
 
 | Category | Agent | When |
 |---|---|---|
-| Review | `rn-reviewer` | before every commit or PR: logic bugs, React Native anti-patterns, rule violations |
+| Review | `slop-reviewer` | before every commit or PR: invented defaults, re-implemented helpers, unused abstractions, leftovers, fake tests (follows `slop-review`) |
+| Review | `adversarial-reviewer` | before every commit or PR: the diff against the spec ACs, agreed constraints, security, React Native and `docs/standards.md` (follows `adversarial-review`) |
 | Review | `mobile-security-auditor` | auth, tokens, storage, deep links, env, network or permissions changed |
 | Review | `a11y-auditor` | UI changes: roles, labels, headings, contrast, touch targets, reduce motion, screen sizes |
 | Review | `perf-auditor` | slow screens or lists, bundle growth, new dependencies; measured evidence only |
@@ -63,7 +66,8 @@ Vendored from upstream and pinned (`.claude/skills/SOURCES.md`; template overrid
 | Maintenance | `docs-keeper` | after changing scripts, `.claude/`, layout, env vars or the stack: fixes doc drift |
 | Maintenance | `sdk-upgrader` | moving to a newer Expo SDK; never builds production, publishes or pushes |
 
-In tools without subagents, read the agent file and follow its checklist.
+In tools without subagents, read the agent file and follow its checklist; the two reviewers point at their skills
+(`slop-review`, `adversarial-review`) in `.agents/skills`.
 
 ## Hooks and permissions (Claude Code)
 
@@ -118,7 +122,7 @@ already enforces and explains (formatting, promises, secrets, the doc budget) ha
 |---|---|
 | `bun run test:hooks` | tests for the Claude Code hooks |
 | `bun run test:tooling` | tests for the repo's own checks (`test/tooling/`): each check must fail when it should |
-| `bun run lint:claude` | validates every skill and agent (frontmatter, names, descriptions, MCP tools), free |
+| `bun run lint:claude` | validates every skill and agent (frontmatter, names, descriptions, MCP tools) and that every `*-reviewer` agent includes the `REVIEW-COMPLETE` marker, free |
 | `bun run docs:check` | fails when docs drift from the repo (scripts, paths, skill/agent lists, MCP configs), when `standards/*.json` break their schema or `docs/standards.md` is stale, and when `AGENTS.md` / `CLAUDE.md` outgrow their size budget |
 | `bun run standards:gen` | regenerate `docs/standards.md` from `standards/*.json` |
 | `bun run skills:sync` / `skills:check` | regenerate / verify the `.agents/skills` copy after editing `.claude/skills` |

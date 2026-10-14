@@ -744,7 +744,7 @@ describe('guard-files', () => {
     ['ask', 'Write', '.github/workflows/ci.yml', 'x'],
     ['ask', 'Write', '.git/hooks/pre-commit', 'x'],
     ['ask', 'Edit', '.claude/skills/new-screen/SKILL.md', 'x'],
-    ['ask', 'Edit', '.claude/agents/rn-reviewer.md', 'x'],
+    ['ask', 'Edit', '.claude/agents/adversarial-reviewer.md', 'x'],
     // protected paths are case-insensitive (macOS and Windows file systems)
     ['ask', 'Edit', 'Package.json', 'x'],
     ['ask', 'Edit', 'PACKAGE.JSON', 'x'],
