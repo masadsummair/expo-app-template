@@ -42,16 +42,16 @@ up Sentry (step 7).
 
 ## Commands
 
-| Command | What it does |
-|---|---|
-| `bun run start` | dev server for the development build |
-| `bun run ios` / `bun run android` | build and run on the iOS simulator (macOS) or Android |
-| `bun run verify` | every check; the pre-commit hook runs it |
-| `bun run doctor` | Expo dependency and config checks |
-| `bun run test:e2e:android` / `test:e2e:ios` | on-device e2e tests (needs a booted emulator or simulator) |
-| `bunx expo install <pkg>` | add a dependency at the SDK-compatible version (dev: `bunx expo install <pkg> -- --dev`) |
-| `bun run eas <command>` | EAS CLI, pinned (build, submit, update) |
-| `bun run rename` | one-time app identity change |
+| Command                                     | What it does                                                                             |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `bun run start`                             | dev server for the development build                                                     |
+| `bun run ios` / `bun run android`           | build and run on the iOS simulator (macOS) or Android                                    |
+| `bun run verify`                            | every check; the pre-commit hook runs it                                                 |
+| `bun run doctor`                            | Expo dependency and config checks                                                        |
+| `bun run test:e2e:android` / `test:e2e:ios` | on-device e2e tests (needs a booted emulator or simulator)                               |
+| `bunx expo install <pkg>`                   | add a dependency at the SDK-compatible version (dev: `bunx expo install <pkg> -- --dev`) |
+| `bun run eas <command>`                     | EAS CLI, pinned (build, submit, update)                                                  |
+| `bun run rename`                            | one-time app identity change                                                             |
 
 ## What's inside
 
@@ -67,15 +67,15 @@ up Sentry (step 7).
 
 ## Docs
 
-| Doc | What's in it |
-|---|---|
-| [docs/setup.md](docs/setup.md) | prerequisites per OS, accounts, every step to start a new app |
-| [docs/stack.md](docs/stack.md) | every tool by category, and what's in the app |
-| [docs/ai-kit.md](docs/ai-kit.md) | AI tool support, the feature workflow, skills, subagents, hooks, MCP servers |
-| [docs/testing.md](docs/testing.md) | pre-commit checks, e2e tests, AI steps on a subscription, optional CI |
-| [docs/release.md](docs/release.md) | builds, OTA updates, env vars, SDK upgrades, keeping the template current |
-| [AGENTS.md](AGENTS.md) | the rules every agent follows |
+| Doc                                    | What's in it                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------- |
+| [docs/setup.md](docs/setup.md)         | prerequisites per OS, accounts, every step to start a new app                         |
+| [docs/stack.md](docs/stack.md)         | every tool by category, and what's in the app                                         |
+| [docs/ai-kit.md](docs/ai-kit.md)       | AI tool support, the feature workflow, skills, subagents, hooks, MCP servers          |
+| [docs/testing.md](docs/testing.md)     | pre-commit checks, e2e tests, AI steps on a subscription, optional CI                 |
+| [docs/release.md](docs/release.md)     | builds, OTA updates, env vars, SDK upgrades, keeping the template current             |
+| [AGENTS.md](AGENTS.md)                 | the rules every agent follows                                                         |
 | [docs/standards.md](docs/standards.md) | the project's goals, non-goals and rules with IDs (generated from `standards/*.json`) |
-| [docs/adr/](docs/adr) | architecture decision records |
+| [docs/adr/](docs/adr)                  | architecture decision records                                                         |
 
 MIT licensed (`LICENSE`). Credits and upstream notices: `THIRD_PARTY_NOTICES.md`.

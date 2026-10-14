@@ -1,5 +1,9 @@
-#!/bin/sh
-# This template has no CI: every check runs here, before each commit (typecheck, lint, unit and hook tests,
-# docs, skills copy, contrast, privacy). e2e needs a booted device, so run it yourself: bun run test:e2e:android|ios.
-# Enabled by `bun install` (scripts/install-git-hooks.ts). Skip once, deliberately: git commit --no-verify
-exec bun run verify
+#!/usr/bin/env bun
+// This template has no CI: every check runs here, before each commit (see `verify` in package.json).
+// e2e needs a booted device, so run it yourself: bun run test:e2e:android|ios.
+// Enabled by `bun install` (scripts/install-git-hooks.ts). Only you can skip it, once, from your own terminal: git commit --no-verify
+import { spawnSync } from 'node:child_process';
+
+const result = spawnSync(process.execPath, ['run', 'verify'], { stdio: 'inherit' });
+if (result.error) console.error(`pre-commit: could not run verify (${result.error.message}).`);
+process.exit(result.status ?? 1);

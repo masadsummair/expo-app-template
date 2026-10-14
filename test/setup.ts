@@ -9,8 +9,8 @@ jest.mock('@sentry/react-native', () => ({
 }));
 
 // Reanimated 4 / Worklets need their native module; use the official Jest mocks instead.
-jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
-jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
+jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
 
 jest.mock('expo-secure-store', () => {
   const store = new Map<string, string>();

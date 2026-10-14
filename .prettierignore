@@ -1,0 +1,17 @@
+# Vendored upstream skills and their generated mirror (skills:sync): formatting would diverge from upstream.
+.claude/skills/
+.agents/
+# docs:check ratchets their byte size, and Prettier pads tables.
+AGENTS.md
+CLAUDE.md
+# Generated, or deliberately bad.
+docs/standards.md
+assets/
+test/tooling/fixtures/
+# Generated native projects.
+ios/
+android/
+# Local agent workspace (superpowers SDD); Prettier reads only the root .gitignore.
+.superpowers/
+# A maintainer's local Claude Code settings (gitignored).
+.claude/settings.local.json

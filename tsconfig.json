@@ -5,6 +5,7 @@
     "noUncheckedIndexedAccess": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
+    "verbatimModuleSyntax": true,
     "types": ["jest"],
     "paths": {
       "@/*": ["./src/*"],

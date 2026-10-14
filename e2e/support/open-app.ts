@@ -33,7 +33,12 @@ export const test = base.extend<{ openApp: () => Promise<void>; signIn: () => Pr
       // polling loop in the suite; a single condition would use expect(...).toBeVisible({ timeout }).
       const deadline = Date.now() + FIRST_LOAD_MS;
       while (Date.now() < deadline) {
-        if ((await signIn.isVisible()) || (await home.isVisible()) || (await devMenuSheet.isVisible())) break;
+        if (
+          (await signIn.isVisible()) ||
+          (await home.isVisible()) ||
+          (await devMenuSheet.isVisible())
+        )
+          break;
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
@@ -43,7 +48,8 @@ export const test = base.extend<{ openApp: () => Promise<void>; signIn: () => Pr
         await screen.getByText('Continue').tap({ position: { x: 8, y: 8 } });
         // "Continue" sometimes opens the full dev menu instead of closing the sheet. Back closes the full
         // menu, but only press it when the menu is showing: otherwise Back leaves the app.
-        if (await screen.getByText('Fast Refresh', { exact: false }).first().isVisible()) await device.back();
+        if (await screen.getByText('Fast Refresh', { exact: false }).first().isVisible())
+          await device.back();
       }
 
       if (await home.isVisible()) await screen.getByTestId('home-sign-out').tap();

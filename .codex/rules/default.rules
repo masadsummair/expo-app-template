@@ -1,0 +1,51 @@
+# Backstop for Codex covering a subset of what .claude/hooks/guard-bash.ts enforces in Claude Code.
+# Codex has no file-edit guard, so this is not a sandbox.
+prefix_rule(
+    pattern = ["npm"],
+    decision = "forbidden",
+    justification = "This template is bun-only. Use bun.",
+    match = ["npm install lodash", "npm run lint"],
+    not_match = ["bun install"],
+)
+prefix_rule(
+    pattern = ["yarn"],
+    decision = "forbidden",
+    justification = "This template is bun-only. Use bun.",
+    match = ["yarn add lodash", "yarn install"],
+    not_match = ["bun install"],
+)
+prefix_rule(
+    pattern = ["pnpm"],
+    decision = "forbidden",
+    justification = "This template is bun-only. Use bun.",
+    match = ["pnpm install", "pnpm add lodash"],
+    not_match = ["bun install"],
+)
+prefix_rule(
+    pattern = ["npx"],
+    decision = "forbidden",
+    justification = "Use bunx with a pinned version, or bunx --no-install for local binaries.",
+    match = ["npx expo start"],
+    not_match = ["bunx expo start"],
+)
+prefix_rule(
+    pattern = ["bun", "add"],
+    decision = "forbidden",
+    justification = "Ask the user before adding a dependency; use bunx expo install for Expo packages.",
+    match = ["bun add zustand"],
+    not_match = ["bun install", "bun run verify"],
+)
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "prompt",
+    justification = "Pushing needs explicit human approval.",
+    match = ["git push origin HEAD"],
+    not_match = ["git status"],
+)
+prefix_rule(
+    pattern = ["gh", "pr", "merge"],
+    decision = "prompt",
+    justification = "Merging needs explicit human approval.",
+    match = ["gh pr merge 12 --squash"],
+    not_match = ["gh pr view 12"],
+)

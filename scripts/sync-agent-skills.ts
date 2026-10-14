@@ -6,14 +6,14 @@
  *   (no flag)  rewrite .agents/skills from .claude/skills
  *   --check    change nothing; exit 1 if .agents/skills differs (file list or contents, CRLF ignored)
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 
 const args = process.argv.slice(2);
-const check = args.includes("--check");
-const root = resolve(args.find((a) => !a.startsWith("--")) ?? process.cwd());
-const src = join(root, ".claude", "skills");
-const dest = join(root, ".agents", "skills");
+const check = args.includes('--check');
+const root = resolve(args.find((a) => !a.startsWith('--')) ?? process.cwd());
+const src = join(root, '.claude', 'skills');
+const dest = join(root, '.agents', 'skills');
 
 const README = `# Generated, do not edit
 
@@ -26,10 +26,10 @@ This folder is a copy of \`.claude/skills/\`, made for Codex, which scans
 `;
 
 /** Relative POSIX-style path -> bytes, for every file under dir (skips OS junk files). */
-function collect(dir: string, rel = "", out = new Map<string, Buffer>()): Map<string, Buffer> {
+function collect(dir: string, rel = '', out = new Map<string, Buffer>()): Map<string, Buffer> {
   if (!existsSync(dir)) return out;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === ".DS_Store" || entry.name === "Thumbs.db") continue;
+    if (entry.name === '.DS_Store' || entry.name === 'Thumbs.db') continue;
     const path = join(dir, entry.name);
     const key = rel ? `${rel}/${entry.name}` : entry.name;
     if (entry.isDirectory()) collect(path, key, out);
@@ -38,14 +38,14 @@ function collect(dir: string, rel = "", out = new Map<string, Buffer>()): Map<st
   return out;
 }
 
-const normalise = (b: Buffer) => b.toString("latin1").replace(/\r\n/g, "\n");
+const normalise = (b: Buffer) => b.toString('latin1').replace(/\r\n/g, '\n');
 
 const expected = collect(src);
 if (expected.size === 0) {
   console.error(`sync-agent-skills: no files under ${src}`);
   process.exit(1);
 }
-expected.set("README.md", Buffer.from(README));
+expected.set('README.md', Buffer.from(README));
 
 if (check) {
   const actual = collect(dest);
@@ -59,15 +59,15 @@ if (check) {
     if (!expected.has(key)) problems.push(`extra: .agents/skills/${key}`);
   }
   if (problems.length > 0) {
-    console.error(problems.join("\n"));
-    console.error("\n.agents/skills is out of date. Run: bun run skills:sync");
+    console.error(problems.join('\n'));
+    console.error('\n.agents/skills is out of date. Run: bun run skills:sync');
     process.exit(1);
   }
   console.log(`.agents/skills matches .claude/skills (${expected.size} files)`);
 } else {
   rmSync(dest, { recursive: true, force: true });
   for (const [key, buf] of expected) {
-    const file = join(dest, ...key.split("/"));
+    const file = join(dest, ...key.split('/'));
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, buf);
   }

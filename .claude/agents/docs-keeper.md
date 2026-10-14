@@ -15,6 +15,7 @@ rules, so a rule is never "fixed" by editing it to match code that broke it.
 ## Where you may edit
 
 Only these files, with `Edit` (never `Write`, never create files):
+
 - `AGENTS.md` — the single source of truth for rules, stack, layout and commands. It has a size budget (`docs:check` fails when it
   outgrows it): never add a table or a gotcha; put detail in `docs/` or the owning skill.
 - `README.md` — short human overview: quick start, daily workflow, top commands, "what's inside", docs index.

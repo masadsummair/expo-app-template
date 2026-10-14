@@ -75,7 +75,11 @@ export function Button({
         <ActivityIndicator
           accessibilityLabel="Loading"
           className="absolute"
-          colorClassName={variant === 'primary' || variant === 'danger' ? 'accent-primary-foreground' : 'accent-foreground'}
+          colorClassName={
+            variant === 'primary' || variant === 'danger'
+              ? 'accent-primary-foreground'
+              : 'accent-foreground'
+          }
         />
       ) : null}
     </Pressable>

@@ -73,8 +73,8 @@ no secrets in `EXPO_PUBLIC_*`, tokens only in SecureStore or in storage encrypte
 
 ## 5. Verify
 
-- [ ] `bun run verify` (the `verify` script in `package.json`: typecheck, lint, Jest, `test:hooks`,
-      `lint:claude`, `docs:check`, `skills:check`, `contrast:check`, `privacy:check`). Paste the pass/fail counts. Fix failures before moving on;
+- [ ] `bun run verify` (every check in the `verify` script of `package.json`; it stops at the first failure, report
+      that one by name). Paste the pass/fail counts. Fix failures before moving on;
       after 3 failed attempts at one failure, stop and report.
 
 ## 6. Review (fresh context, as subagents)

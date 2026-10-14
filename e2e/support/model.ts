@@ -46,7 +46,8 @@ const DEFAULT_MODELS: Record<ModelProvider, string> = {
  */
 function storedLogins(): ModelProvider[] {
   const file = join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'e2e', 'oauth.json');
-  const json = process.env.E2E_OAUTH_CREDENTIALS || (existsSync(file) ? readFileSync(file, 'utf8') : '');
+  const json =
+    process.env.E2E_OAUTH_CREDENTIALS || (existsSync(file) ? readFileSync(file, 'utf8') : '');
   if (!json) return [];
   try {
     return Object.keys(JSON.parse(json) as object).flatMap((id) => LOGIN_IDS[id] ?? []);
@@ -61,12 +62,18 @@ export function selectModelProvider(): Selection {
   const explicit = process.env.E2E_MODEL_PROVIDER;
   if (explicit) {
     if (!PROVIDERS.includes(explicit as ModelProvider)) {
-      throw new Error(`E2E_MODEL_PROVIDER must be one of ${PROVIDERS.join(', ')}; got "${explicit}".`);
+      throw new Error(
+        `E2E_MODEL_PROVIDER must be one of ${PROVIDERS.join(', ')}; got "${explicit}".`,
+      );
     }
     return { provider: explicit as ModelProvider };
   }
   if (process.env.E2E_AGENT !== '1') {
-    return { provider: undefined, reason: 'agent steps are opt-in: set E2E_AGENT=1 (or E2E_MODEL_PROVIDER) to spend model quota' };
+    return {
+      provider: undefined,
+      reason:
+        'agent steps are opt-in: set E2E_AGENT=1 (or E2E_MODEL_PROVIDER) to spend model quota',
+    };
   }
   if (process.env.ANTHROPIC_API_KEY) return { provider: 'anthropic' };
   if (process.env.OPENCODE_API_KEY) return { provider: 'opencode' };
@@ -74,11 +81,15 @@ export function selectModelProvider(): Selection {
   const [only] = logins;
   if (only && logins.length === 1) return { provider: only };
   if (logins.length > 1) {
-    return { provider: undefined, reason: `several e2e logins (${logins.join(', ')}): set E2E_MODEL_PROVIDER to pick one` };
+    return {
+      provider: undefined,
+      reason: `several e2e logins (${logins.join(', ')}): set E2E_MODEL_PROVIDER to pick one`,
+    };
   }
   return {
     provider: undefined,
-    reason: 'no model: set ANTHROPIC_API_KEY or run `bunx --no-install e2e login <provider>` (see docs/testing.md)',
+    reason:
+      'no model: set ANTHROPIC_API_KEY or run `bunx --no-install e2e login <provider>` (see docs/testing.md)',
   };
 }
 

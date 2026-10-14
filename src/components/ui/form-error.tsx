@@ -18,7 +18,12 @@ export function FormError({ message, testID }: FormErrorProps) {
 
   if (!message) return null;
   return (
-    <Text variant="caption" className="text-danger" accessibilityLiveRegion="polite" testID={testID}>
+    <Text
+      variant="caption"
+      className="text-danger"
+      accessibilityLiveRegion="polite"
+      testID={testID}
+    >
       {message}
     </Text>
   );

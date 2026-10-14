@@ -24,11 +24,15 @@ function git(...args: string[]): { ok: boolean; out: string } {
 const current = git('config', '--get', 'core.hooksPath').out;
 if (current === '.githooks') process.exit(0);
 if (current) {
-  console.warn(`install-git-hooks: core.hooksPath is already "${current}"; leaving it. To use this template's hooks, ${MANUAL}.`);
+  console.warn(
+    `install-git-hooks: core.hooksPath is already "${current}"; leaving it. To use this template's hooks, ${MANUAL}.`,
+  );
   process.exit(0);
 }
 if (!git('config', 'core.hooksPath', '.githooks').ok) {
   console.warn(`install-git-hooks: could not configure git; ${MANUAL}.`);
   process.exit(0);
 }
-console.log('install-git-hooks: pre-commit now runs `bun run verify` (skip once with git commit --no-verify).');
+console.log(
+  'install-git-hooks: pre-commit now runs `bun run verify` (skip once with git commit --no-verify).',
+);

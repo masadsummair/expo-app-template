@@ -49,10 +49,16 @@ describe('haptics', () => {
     haptics.success();
     haptics.error();
     const calls = (Haptics.performAndroidHapticsAsync as jest.Mock).mock.calls.map((c) => c[0]);
-    expect(calls).toEqual(['virtual-key', 'segment-tick', 'toggle-on', 'toggle-off', 'confirm', 'reject']);
+    expect(calls).toEqual([
+      'virtual-key',
+      'segment-tick',
+      'toggle-on',
+      'toggle-off',
+      'confirm',
+      'reject',
+    ]);
     expect(Haptics.impactAsync).not.toHaveBeenCalled();
   });
-
 
   it('never throws when the native call fails', () => {
     setOS('ios');

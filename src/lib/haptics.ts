@@ -28,7 +28,9 @@ export const tap = () =>
 
 /** Tick for picker/segment changes. */
 export const select = () =>
-  run(() => (isAndroid() ? android(Haptics.AndroidHaptics.Segment_Tick) : Haptics.selectionAsync()));
+  run(() =>
+    isAndroid() ? android(Haptics.AndroidHaptics.Segment_Tick) : Haptics.selectionAsync(),
+  );
 
 /** Switch flipped on or off. */
 export const toggle = (on: boolean) =>

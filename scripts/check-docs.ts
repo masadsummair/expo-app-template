@@ -10,47 +10,81 @@
  * CLAUDE.md imports AGENTS.md; stack versions and env vars match the code; the e2e build mode
  * (APP_ID, DEV_CLIENT_SCHEME) matches app.config.ts; every MCP config file lists the same servers; .gitattributes exists;
  * standards/{core,design,variant}.json match their schema and docs/standards.md is the rendered output;
- * AGENTS.md and CLAUDE.md stay inside their size budget.
+ * AGENTS.md and CLAUDE.md stay inside their size budget; no tracked .js/.mjs/.cjs/.jsx/.sh file
+ * outside the core.typescript-only allowlist (needs git).
  */
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { loadStandards, renderStandards } from "./lib/standards";
+import { spawnSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { loadStandards, renderStandards } from './lib/standards';
 
 const args = process.argv.slice(2);
-const strict = args.includes("--strict");
-const root = resolve(args.find((a) => !a.startsWith("--")) ?? process.cwd());
+const strict = args.includes('--strict');
+const root = resolve(args.find((a) => !a.startsWith('--')) ?? process.cwd());
 
-type Finding = { level: "error" | "warn"; file: string; msg: string };
+type Finding = { level: 'error' | 'warn'; file: string; msg: string };
 const findings: Finding[] = [];
-const err = (file: string, msg: string) => findings.push({ level: "error", file, msg });
-const warn = (file: string, msg: string) => findings.push({ level: "warn", file, msg });
+const err = (file: string, msg: string) => findings.push({ level: 'error', file, msg });
+const warn = (file: string, msg: string) => findings.push({ level: 'warn', file, msg });
 
 const at = (...p: string[]) => join(root, ...p);
-const read = (p: string) => readFileSync(p, "utf8");
+const read = (p: string) => readFileSync(p, 'utf8');
 const readIf = (rel: string) => (existsSync(at(rel)) ? read(at(rel)) : null);
 
 // Paths that docs may name although they are generated, gitignored, local-only, or created by the reader.
 const MISSING_PATH_OK = new Set([
-  "ios", "android", "expo-env.d.ts", "src/uniwind-types.d.ts", ".env", ".env.local", ".expo", "node_modules",
-  "dist", "specs/steering", "specs", "LICENSE",
-  "SKILL.md", // generic file name used in prose, not a root file
+  'ios',
+  'android',
+  'expo-env.d.ts',
+  'src/uniwind-types.d.ts',
+  '.env',
+  '.env.local',
+  '.expo',
+  'node_modules',
+  'dist',
+  'specs/steering',
+  'specs',
+  'LICENSE',
+  'SKILL.md', // generic file name used in prose, not a root file
 ]);
 // Root-level or top-level names that make a backtick token count as a repo path.
-const PATH_ROOTS = ["src", ".claude", ".github", ".githooks", ".eas", "docs", "e2e", "scripts", "specs", "test", "assets", "licenses", "ios", "android"];
-const ROOT_FILE = /^[\w.-]+\.(md|json|js|yml|yaml|lock)$|^[\w-]+\.config\.ts$|^\.env(\.example)?$|^LICENSE$/;
+const PATH_ROOTS = [
+  'src',
+  '.claude',
+  '.github',
+  '.githooks',
+  '.eas',
+  'docs',
+  'e2e',
+  'scripts',
+  'specs',
+  'test',
+  'assets',
+  'licenses',
+  'ios',
+  'android',
+];
+const ROOT_FILE =
+  /^[\w.-]+\.(md|json|js|yml|yaml|lock)$|^[\w-]+\.config\.ts$|^\.env(\.example)?$|^LICENSE$/;
 
 const docs = [
-  "README.md", "AGENTS.md", "CLAUDE.md",
-  "specs/README.md", "specs/_template.md", "THIRD_PARTY_NOTICES.md",
-  ...(existsSync(at("docs")) ? readdirSync(at("docs")).filter((n) => n.endsWith(".md")).map((n) => `docs/${n}`) : []),
-].filter((f) =>
-  existsSync(at(f)),
-);
+  'README.md',
+  'AGENTS.md',
+  'CLAUDE.md',
+  'specs/README.md',
+  'specs/_template.md',
+  'THIRD_PARTY_NOTICES.md',
+  ...(existsSync(at('docs'))
+    ? readdirSync(at('docs'))
+        .filter((n) => n.endsWith('.md'))
+        .map((n) => `docs/${n}`)
+    : []),
+].filter((f) => existsSync(at(f)));
 const text: Record<string, string> = Object.fromEntries(docs.map((f) => [f, read(at(f))]));
 
-const pkgRaw = readIf("package.json");
+const pkgRaw = readIf('package.json');
 if (!pkgRaw) {
-  console.error("package.json not found in " + root);
+  console.error('package.json not found in ' + root);
   process.exit(2);
 }
 const pkg = JSON.parse(pkgRaw) as {
@@ -65,34 +99,38 @@ const listDirs = (rel: string) =>
   existsSync(at(rel)) ? readdirSync(at(rel)).filter((n) => statSync(at(rel, n)).isDirectory()) : [];
 const ownDocFiles = (): string[] => {
   const files = [...docs];
-  for (const s of listDirs(".claude/skills")) if (existsSync(at(".claude/skills", s, "SKILL.md"))) files.push(`.claude/skills/${s}/SKILL.md`);
-  if (existsSync(at(".claude/agents")))
-    for (const a of readdirSync(at(".claude/agents"))) if (a.endsWith(".md")) files.push(`.claude/agents/${a}`);
+  for (const s of listDirs('.claude/skills'))
+    if (existsSync(at('.claude/skills', s, 'SKILL.md'))) files.push(`.claude/skills/${s}/SKILL.md`);
+  if (existsSync(at('.claude/agents')))
+    for (const a of readdirSync(at('.claude/agents')))
+      if (a.endsWith('.md')) files.push(`.claude/agents/${a}`);
   return files;
 };
 
-const sources = readIf(".claude/skills/SOURCES.md") ?? "";
+const sources = readIf('.claude/skills/SOURCES.md') ?? '';
 const vendored = new Set<string>();
-for (const row of sources.split("\n")) {
+for (const row of sources.split('\n')) {
   const first = row.match(/^\|\s*([^|]+?)\s*\|/)?.[1];
   if (!first || /^(Skill|-+)$/.test(first)) continue;
-  for (const n of first.split(",")) vendored.add(n.trim());
+  for (const n of first.split(',')) vendored.add(n.trim());
 }
-const allSkills = listDirs(".claude/skills").filter((s) => s !== "THIRD_PARTY");
+const allSkills = listDirs('.claude/skills').filter((s) => s !== 'THIRD_PARTY');
 const ownSkills = allSkills.filter((s) => !vendored.has(s));
-const agentNames = existsSync(at(".claude/agents"))
-  ? readdirSync(at(".claude/agents")).filter((f) => f.endsWith(".md")).map((f) => f.slice(0, -3))
+const agentNames = existsSync(at('.claude/agents'))
+  ? readdirSync(at('.claude/agents'))
+      .filter((f) => f.endsWith('.md'))
+      .map((f) => f.slice(0, -3))
   : [];
 
 // 1. Commands: every `bun run <name>` and `bun scripts/<file>` must resolve.
 for (const f of ownDocFiles()) {
-  const t = f in text ? text[f] ?? "" : read(at(f));
+  const t = f in text ? (text[f] ?? '') : read(at(f));
   for (const m of t.matchAll(/\bbun run ([A-Za-z0-9][\w:.-]*)/g)) {
-    const name = m[1] ?? "";
+    const name = m[1] ?? '';
     if (!scripts.has(name)) err(f, `\`bun run ${name}\` but package.json has no "${name}" script`);
   }
   for (const m of t.matchAll(/\bbun (scripts\/[\w./-]+\.(?:ts|js))/g)) {
-    if (!existsSync(at(m[1] ?? ""))) err(f, `\`bun ${m[1]}\` but that file does not exist`);
+    if (!existsSync(at(m[1] ?? ''))) err(f, `\`bun ${m[1]}\` but that file does not exist`);
   }
   for (const m of t.matchAll(/`bun test(?:\s[^`]*)?`/g)) {
     err(f, `${m[0]} runs Bun's own runner, not Jest; the script is \`bun run test\``);
@@ -101,135 +139,203 @@ for (const f of ownDocFiles()) {
 
 // 2. Paths in backticks, README/AGENTS/CLAUDE only (skills use illustrative paths on purpose).
 function looksLikePath(tok: string): boolean {
-  if (/[*<>{}$|\s]/.test(tok) || tok.includes("...")) return false;
-  const first = tok.split("/")[0] ?? "";
-  if (tok.includes("/")) return PATH_ROOTS.includes(first);
+  if (/[*<>{}$|\s]/.test(tok) || tok.includes('...')) return false;
+  const first = tok.split('/')[0] ?? '';
+  if (tok.includes('/')) return PATH_ROOTS.includes(first);
   return ROOT_FILE.test(tok);
 }
 function checkPath(file: string, raw: string) {
-  const tok = raw.replace(/:\d+(-\d+)?$/, "").replace(/\/+$/, "");
+  const tok = raw.replace(/:\d+(-\d+)?$/, '').replace(/\/+$/, '');
   if (!tok || !looksLikePath(tok) || MISSING_PATH_OK.has(tok)) return;
-  if ([...MISSING_PATH_OK].some((p) => tok === p || tok.startsWith(p + "/")) && !existsSync(at(tok))) return;
+  if (
+    [...MISSING_PATH_OK].some((p) => tok === p || tok.startsWith(p + '/')) &&
+    !existsSync(at(tok))
+  )
+    return;
   // A bare name in a nested doc (specs/README.md) may be relative to that doc.
-  if (!existsSync(at(tok)) && !existsSync(at(dirname(file), tok))) err(file, `path \`${tok}\` is named in the docs but does not exist`);
+  if (!existsSync(at(tok)) && !existsSync(at(dirname(file), tok)))
+    err(file, `path \`${tok}\` is named in the docs but does not exist`);
 }
 for (const f of docs) {
-  for (const m of (text[f] ?? "").matchAll(/`([^`\n]+)`/g)) checkPath(f, m[1] ?? "");
+  for (const m of (text[f] ?? '').matchAll(/`([^`\n]+)`/g)) checkPath(f, m[1] ?? '');
 }
 
 // 3. The Layout code block in AGENTS.md is a few prose lines: every token in it that is a path (has a "/") or a root config file must exist.
 {
-  const t = text["AGENTS.md"];
+  const t = text['AGENTS.md'];
   const block = t?.match(/^## Layout\s*\n+```[^\n]*\n([\s\S]*?)\n```/m)?.[1];
-  if (t && !block) warn("AGENTS.md", "no `## Layout` code block found; layout drift is unchecked");
-  for (const raw of (block ?? "").split(/\s+/)) {
-    const tok = raw.replace(/[,;:]+$/, "");
-    if (!/^[.\w()@-]+(\/[.\w()@-]*)*\/?$/.test(tok) || !(tok.includes("/") || ROOT_FILE.test(tok))) continue;
-    const clean = tok.replace(/\/+$/, "");
-    if (!existsSync(at(clean)) && !MISSING_PATH_OK.has(clean)) err("AGENTS.md", `Layout lists \`${tok}\` but it does not exist`);
+  if (t && !block) warn('AGENTS.md', 'no `## Layout` code block found; layout drift is unchecked');
+  for (const raw of (block ?? '').split(/\s+/)) {
+    const tok = raw.replace(/[,;:]+$/, '');
+    if (!/^[.\w()@-]+(\/[.\w()@-]*)*\/?$/.test(tok) || !(tok.includes('/') || ROOT_FILE.test(tok)))
+      continue;
+    const clean = tok.replace(/\/+$/, '');
+    if (!existsSync(at(clean)) && !MISSING_PATH_OK.has(clean))
+      err('AGENTS.md', `Layout lists \`${tok}\` but it does not exist`);
   }
 }
 
 // 4. Inventory: agents documented, skills named in docs exist, own skills documented.
 {
-  const registry = (text["AGENTS.md"] ?? "") + (text["CLAUDE.md"] ?? "") + (text["docs/ai-kit.md"] ?? "");
+  const registry =
+    (text['AGENTS.md'] ?? '') + (text['CLAUDE.md'] ?? '') + (text['docs/ai-kit.md'] ?? '');
   for (const a of agentNames) {
-    if (!registry.includes("`" + a + "`")) err("AGENTS.md", `agent \`${a}\` exists in .claude/agents but is not named in AGENTS.md, CLAUDE.md or docs/ai-kit.md`);
+    if (!registry.includes('`' + a + '`'))
+      err(
+        'AGENTS.md',
+        `agent \`${a}\` exists in .claude/agents but is not named in AGENTS.md, CLAUDE.md or docs/ai-kit.md`,
+      );
   }
   for (const s of ownSkills) {
-    if (!registry.includes("`" + s + "`") && !registry.includes("`" + s + "/") ) {
-      warn("AGENTS.md", `own skill \`${s}\` is not named in AGENTS.md, CLAUDE.md or docs/ai-kit.md`);
+    if (!registry.includes('`' + s + '`') && !registry.includes('`' + s + '/')) {
+      warn(
+        'AGENTS.md',
+        `own skill \`${s}\` is not named in AGENTS.md, CLAUDE.md or docs/ai-kit.md`,
+      );
     }
-    if (sources && !sources.includes(s)) warn(".claude/skills/SOURCES.md", `own skill \`${s}\` is not in its "authored for this template" sentence`);
+    if (sources && !sources.includes(s))
+      warn(
+        '.claude/skills/SOURCES.md',
+        `own skill \`${s}\` is not in its "authored for this template" sentence`,
+      );
   }
   for (const v of vendored) {
-    if (!allSkills.includes(v)) err(".claude/skills/SOURCES.md", `lists vendored skill \`${v}\` but the folder does not exist`);
+    if (!allSkills.includes(v))
+      err(
+        '.claude/skills/SOURCES.md',
+        `lists vendored skill \`${v}\` but the folder does not exist`,
+      );
   }
   for (const m of sources.matchAll(/Everything not listed here \(([^)]*)\)/g)) {
-    for (const n of (m[1] ?? "").split(",").map((s) => s.replace(/`/g, "").trim()).filter(Boolean)) {
-      if (!allSkills.includes(n)) err(".claude/skills/SOURCES.md", `says \`${n}\` is authored here but the folder does not exist`);
+    for (const n of (m[1] ?? '')
+      .split(',')
+      .map((s) => s.replace(/`/g, '').trim())
+      .filter(Boolean)) {
+      if (!allSkills.includes(n))
+        err(
+          '.claude/skills/SOURCES.md',
+          `says \`${n}\` is authored here but the folder does not exist`,
+        );
     }
   }
-  for (const f of ["README.md", "AGENTS.md", "CLAUDE.md"]) {
-    const m = (text[f] ?? "").match(/(\d+) pinned upstream skills/);
-    if (m && Number(m[1]) !== vendored.size) err(f, `says ${m[1]} pinned upstream skills but SOURCES.md lists ${vendored.size}`);
+  for (const f of ['README.md', 'AGENTS.md', 'CLAUDE.md']) {
+    const m = (text[f] ?? '').match(/(\d+) pinned upstream skills/);
+    if (m && Number(m[1]) !== vendored.size)
+      err(f, `says ${m[1]} pinned upstream skills but SOURCES.md lists ${vendored.size}`);
   }
   // A backticked token that is clearly a skill or agent reference must resolve.
   const known = new Set([...allSkills, ...agentNames]);
-  for (const f of ["AGENTS.md", "CLAUDE.md"]) {
-    for (const m of (text[f] ?? "").matchAll(/`\.claude\/(skills|agents)\/([\w-]+)(?:\/SKILL\.md|\.md)?`/g)) {
-      if (m[2] === "SOURCES") continue;
-      if (!known.has(m[2] ?? "")) err(f, `references .claude/${m[1]}/${m[2]} which does not exist`);
+  for (const f of ['AGENTS.md', 'CLAUDE.md']) {
+    for (const m of (text[f] ?? '').matchAll(
+      /`\.claude\/(skills|agents)\/([\w-]+)(?:\/SKILL\.md|\.md)?`/g,
+    )) {
+      if (m[2] === 'SOURCES') continue;
+      if (!known.has(m[2] ?? '')) err(f, `references .claude/${m[1]}/${m[2]} which does not exist`);
     }
   }
 }
 
 // 5. One source of truth: CLAUDE.md imports AGENTS.md first.
-for (const f of ["CLAUDE.md"]) {
+for (const f of ['CLAUDE.md']) {
   if (!(f in text)) continue;
-  const first = (text[f] ?? "").split("\n").find((l) => l.trim() !== "");
-  if (first?.trim() !== "@AGENTS.md") err(f, "must start with `@AGENTS.md` so AGENTS.md stays the single source of truth");
+  const first = (text[f] ?? '').split('\n').find((l) => l.trim() !== '');
+  if (first?.trim() !== '@AGENTS.md')
+    err(f, 'must start with `@AGENTS.md` so AGENTS.md stays the single source of truth');
 }
 
 // 6. Versions and env vars named in prose must match the code.
 {
-  const major = (v: string | undefined) => v?.replace(/^[^\d]*/, "").split(".")[0];
-  const minor = (v: string | undefined) => v?.replace(/^[^\d]*/, "").split(".").slice(0, 2).join(".");
-  const expoMajor = major(dep("expo"));
-  const rnMinor = minor(dep("react-native"));
-  const reactMinor = minor(dep("react"));
+  const major = (v: string | undefined) => v?.replace(/^[^\d]*/, '').split('.')[0];
+  const minor = (v: string | undefined) =>
+    v
+      ?.replace(/^[^\d]*/, '')
+      .split('.')
+      .slice(0, 2)
+      .join('.');
+  const expoMajor = major(dep('expo'));
+  const rnMinor = minor(dep('react-native'));
+  const reactMinor = minor(dep('react'));
   for (const f of docs) {
-    const t = text[f] ?? "";
-    for (const m of t.matchAll(/Expo SDK (\d+)/g)) if (expoMajor && m[1] !== expoMajor) err(f, `says Expo SDK ${m[1]} but package.json has expo ${dep("expo")}`);
-    for (const m of t.matchAll(/React Native (\d+\.\d+)/g)) if (rnMinor && m[1] !== rnMinor) err(f, `says React Native ${m[1]} but package.json has ${dep("react-native")}`);
-    for (const m of t.matchAll(/React (19\.\d+)/g)) if (reactMinor && m[1] !== reactMinor) err(f, `says React ${m[1]} but package.json has react ${dep("react")}`);
+    const t = text[f] ?? '';
+    for (const m of t.matchAll(/Expo SDK (\d+)/g))
+      if (expoMajor && m[1] !== expoMajor)
+        err(f, `says Expo SDK ${m[1]} but package.json has expo ${dep('expo')}`);
+    for (const m of t.matchAll(/React Native (\d+\.\d+)/g))
+      if (rnMinor && m[1] !== rnMinor)
+        err(f, `says React Native ${m[1]} but package.json has ${dep('react-native')}`);
+    for (const m of t.matchAll(/React (19\.\d+)/g))
+      if (reactMinor && m[1] !== reactMinor)
+        err(f, `says React ${m[1]} but package.json has react ${dep('react')}`);
   }
   // The pinned toolchain: `.node-version` and package.json `packageManager` (bun@x.y.z).
-  const nodeCi = readIf(".node-version")?.trim().match(/^v?(\d+)/)?.[1];
-  const bunCi = (readIf("package.json") ?? "").match(/"packageManager":\s*"bun@(\d+)\.(\d+)/);
+  const nodeCi = readIf('.node-version')
+    ?.trim()
+    .match(/^v?(\d+)/)?.[1];
+  const bunCi = (readIf('package.json') ?? '').match(/"packageManager":\s*"bun@(\d+)\.(\d+)/);
   for (const f of docs) {
-    const t = text[f] ?? "";
-    for (const m of t.matchAll(/\bNode (\d+)\b/g)) if (nodeCi && m[1] !== nodeCi) err(f, `says Node ${m[1]} but .node-version is ${nodeCi}`);
+    const t = text[f] ?? '';
+    for (const m of t.matchAll(/\bNode (\d+)\b/g))
+      if (nodeCi && m[1] !== nodeCi) err(f, `says Node ${m[1]} but .node-version is ${nodeCi}`);
     for (const m of t.matchAll(/bun ≥ (\d+)\.(\d+)/g)) {
-      if (bunCi && (Number(m[1]) > Number(bunCi[1]) || (Number(m[1]) === Number(bunCi[1]) && Number(m[2]) > Number(bunCi[2])))) {
-        err(f, `requires bun ≥ ${m[1]}.${m[2]} but packageManager pins bun ${bunCi[1]}.${bunCi[2]}`);
+      if (
+        bunCi &&
+        (Number(m[1]) > Number(bunCi[1]) ||
+          (Number(m[1]) === Number(bunCi[1]) && Number(m[2]) > Number(bunCi[2])))
+      ) {
+        err(
+          f,
+          `requires bun ≥ ${m[1]}.${m[2]} but packageManager pins bun ${bunCi[1]}.${bunCi[2]}`,
+        );
       }
     }
   }
-  const envSources = (readIf("src/config/env.ts") ?? "") + (readIf(".env.example") ?? "");
+  const envSources = (readIf('src/config/env.ts') ?? '') + (readIf('.env.example') ?? '');
   for (const f of docs) {
-    for (const m of new Set((text[f] ?? "").match(/EXPO_PUBLIC_[A-Z0-9]+(?:_[A-Z0-9]+)*/g) ?? [])) {
-      if (!envSources.includes(m)) err(f, `names env var ${m} but it is not in src/config/env.ts or .env.example`);
+    for (const m of new Set((text[f] ?? '').match(/EXPO_PUBLIC_[A-Z0-9]+(?:_[A-Z0-9]+)*/g) ?? [])) {
+      if (!envSources.includes(m))
+        err(f, `names env var ${m} but it is not in src/config/env.ts or .env.example`);
     }
   }
 }
 
 // 7. Reverse: package.json scripts nobody documented (warning only: some are internal).
 {
-  const documented = ["README.md", "AGENTS.md", "CLAUDE.md", ...docs.filter((f) => f.startsWith("docs/"))]
-    .map((f) => text[f] ?? "")
-    .join("");
+  const documented = [
+    'README.md',
+    'AGENTS.md',
+    'CLAUDE.md',
+    ...docs.filter((f) => f.startsWith('docs/')),
+  ]
+    .map((f) => text[f] ?? '')
+    .join('');
   for (const s of scripts) {
-    if (!documented.includes(s)) warn("package.json", `script "${s}" is not mentioned in README.md, AGENTS.md, CLAUDE.md or docs/`);
+    if (!documented.includes(s))
+      warn(
+        'package.json',
+        `script "${s}" is not mentioned in README.md, AGENTS.md, CLAUDE.md or docs/`,
+      );
   }
 }
 
 // 8. e2e/support/build-mode.ts must agree with app.config.ts: dev app id and dev-client scheme.
 {
-  const cfg = readIf("app.config.ts");
-  const mode = readIf("e2e/support/build-mode.ts");
+  const cfg = readIf('app.config.ts');
+  const mode = readIf('e2e/support/build-mode.ts');
   if (cfg && mode) {
     const baseId = cfg.match(/const BASE_ID\s*=\s*['"]([^'"]+)['"]/)?.[1];
     const slug = cfg.match(/\bslug:\s*['"]([^'"]+)['"]/)?.[1];
     const appId = mode.match(/export const APP_ID\s*=[^;]*?\?\?\s*['"]([^'"]+)['"]/)?.[1];
     const scheme = mode.match(/export const DEV_CLIENT_SCHEME\s*=\s*['"]([^'"]+)['"]/)?.[1];
-    const f = "e2e/support/build-mode.ts";
-    if (!baseId || !slug) err("app.config.ts", "could not parse BASE_ID or slug; the e2e build-mode check is skipped");
+    const f = 'e2e/support/build-mode.ts';
+    if (!baseId || !slug)
+      err('app.config.ts', 'could not parse BASE_ID or slug; the e2e build-mode check is skipped');
     else {
-      if (!appId) err(f, "could not parse APP_ID");
-      else if (appId !== `${baseId}.dev`) err(f, `APP_ID is ${appId} but app.config.ts BASE_ID gives ${baseId}.dev`);
-      if (!scheme) err(f, "could not parse DEV_CLIENT_SCHEME");
-      else if (scheme !== `exp+${slug}`) err(f, `DEV_CLIENT_SCHEME is ${scheme} but app.config.ts slug gives exp+${slug}`);
+      if (!appId) err(f, 'could not parse APP_ID');
+      else if (appId !== `${baseId}.dev`)
+        err(f, `APP_ID is ${appId} but app.config.ts BASE_ID gives ${baseId}.dev`);
+      if (!scheme) err(f, 'could not parse DEV_CLIENT_SCHEME');
+      else if (scheme !== `exp+${slug}`)
+        err(f, `DEV_CLIENT_SCHEME is ${scheme} but app.config.ts slug gives exp+${slug}`);
     }
   }
 }
@@ -242,38 +348,48 @@ for (const f of ["CLAUDE.md"]) {
     try {
       return [rel, parse(raw).sort()];
     } catch {
-      err(rel, "could not be parsed; the MCP server parity check is skipped for it");
+      err(rel, 'could not be parsed; the MCP server parity check is skipped for it');
       return null;
     }
   };
   // JSONC allowed (whole-line // comments only, so URLs survive).
-  const json = (raw: string) => JSON.parse(raw.replace(/^\s*\/\/.*$/gm, "")) as Record<string, Record<string, unknown> | undefined>;
+  const json = (raw: string) =>
+    JSON.parse(raw.replace(/^\s*\/\/.*$/gm, '')) as Record<
+      string,
+      Record<string, unknown> | undefined
+    >;
   const configs = [
-    names(".mcp.json", (r) => Object.keys(json(r).mcpServers ?? {})),
-    names(".codex/config.toml", (r) => [
-      ...new Set([...r.matchAll(/^\[mcp_servers\.(?:"([^"]+)"|([\w-]+))(?:\.[^\]]*)?\]/gm)].map((m) => m[1] ?? m[2] ?? "")),
+    names('.mcp.json', (r) => Object.keys(json(r).mcpServers ?? {})),
+    names('.codex/config.toml', (r) => [
+      ...new Set(
+        [...r.matchAll(/^\[mcp_servers\.(?:"([^"]+)"|([\w-]+))(?:\.[^\]]*)?\]/gm)].map(
+          (m) => m[1] ?? m[2] ?? '',
+        ),
+      ),
     ]),
   ].filter((c): c is [string, string[]] => c !== null);
   const [ref, ...rest] = configs;
   for (const [file, servers] of rest) {
     if (ref && servers.join() !== ref[1].join()) {
-      err(file, `MCP servers [${servers.join(", ")}] differ from ${ref[0]} [${ref[1].join(", ")}]`);
+      err(file, `MCP servers [${servers.join(', ')}] differ from ${ref[0]} [${ref[1].join(', ')}]`);
     }
   }
 }
 
 // 10. CRLF checkouts on Windows break shell scripts; .gitattributes pins line endings.
-if (!existsSync(at(".gitattributes"))) err(".gitattributes", "missing; Windows checkouts would convert line endings");
+if (!existsSync(at('.gitattributes')))
+  err('.gitattributes', 'missing; Windows checkouts would convert line endings');
 
 // 11. Standards: standards/*.json match the schema, and docs/standards.md is exactly what they render to.
 {
   try {
     const rendered = renderStandards(loadStandards(root));
-    const current = readIf("docs/standards.md");
-    if (current === null) err("docs/standards.md", "missing; run `bun run standards:gen`");
-    else if (current.replace(/\r\n/g, "\n") !== rendered) err("docs/standards.md", "is stale; run `bun run standards:gen` (never edit it by hand)");
+    const current = readIf('docs/standards.md');
+    if (current === null) err('docs/standards.md', 'missing; run `bun run standards:gen`');
+    else if (current.replace(/\r\n/g, '\n') !== rendered)
+      err('docs/standards.md', 'is stale; run `bun run standards:gen` (never edit it by hand)');
   } catch (e) {
-    err("standards", (e as Error).message);
+    err('standards', (e as Error).message);
   }
 }
 
@@ -282,25 +398,71 @@ if (!existsSync(at(".gitattributes"))) err(".gitattributes", "missing; Windows c
 // raising it. The combined hard limit is a backstop.
 {
   const RATCHET: Record<string, { lines: number; bytes: number }> = {
-    "AGENTS.md": { lines: 150, bytes: 18_000 },
-    "CLAUDE.md": { lines: 25, bytes: 2_000 },
+    'AGENTS.md': { lines: 150, bytes: 18_000 },
+    'CLAUDE.md': { lines: 25, bytes: 2_000 },
   };
   const HARD_LIMIT_BYTES = 32 * 1024;
   let total = 0;
   for (const [file, max] of Object.entries(RATCHET)) {
     const t = text[file];
     if (t === undefined) continue;
-    const bytes = Buffer.byteLength(t, "utf8");
-    const lines = t.split("\n").length - (t.endsWith("\n") ? 1 : 0);
+    const bytes = Buffer.byteLength(t, 'utf8');
+    const lines = t.split('\n').length - (t.endsWith('\n') ? 1 : 0);
     total += bytes;
-    if (lines > max.lines) err(file, `${lines} lines, ratchet is ${max.lines}: trim it, do not raise the ratchet`);
-    if (bytes > max.bytes) err(file, `${bytes} bytes, ratchet is ${max.bytes}: trim it, do not raise the ratchet`);
+    if (lines > max.lines)
+      err(file, `${lines} lines, ratchet is ${max.lines}: trim it, do not raise the ratchet`);
+    if (bytes > max.bytes)
+      err(file, `${bytes} bytes, ratchet is ${max.bytes}: trim it, do not raise the ratchet`);
   }
-  if (total > HARD_LIMIT_BYTES) err("AGENTS.md + CLAUDE.md", `${total} bytes together, over the 32 KiB hard limit (${HARD_LIMIT_BYTES})`);
+  if (total > HARD_LIMIT_BYTES)
+    err(
+      'AGENTS.md + CLAUDE.md',
+      `${total} bytes together, over the 32 KiB hard limit (${HARD_LIMIT_BYTES})`,
+    );
 }
 
-const errors = findings.filter((f) => f.level === "error");
-const warnings = findings.filter((f) => f.level === "warn");
-for (const f of [...errors, ...warnings]) console.log(`${f.level.toUpperCase().padEnd(5)} ${f.file}: ${f.msg}`);
-console.log(`check-docs: ${errors.length} error(s), ${warnings.length} warning(s), ${docs.length} doc file(s) scanned`);
+// 13. core.typescript-only: no tracked .js/.mjs/.cjs/.jsx/.sh file unless the rule text allows it
+// (a backticked path plus the reason it cannot be TypeScript).
+{
+  let rule: string | undefined;
+  let loaded = true;
+  try {
+    rule = loadStandards(root).core.rules['core.typescript-only']?.rule;
+  } catch {
+    loaded = false; // block 11 already reported the invalid standards files
+  }
+  const tracked = spawnSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' });
+  if (loaded && rule === undefined)
+    err('standards/core.json', 'rule core.typescript-only is missing');
+  else if (loaded && tracked.status !== 0)
+    warn('core.typescript-only', 'not a git checkout; the TypeScript-only check is skipped');
+  else if (loaded && rule !== undefined) {
+    const files = tracked.stdout.split('\0');
+    const allowed = new Set(
+      [...rule.matchAll(/`([^`\s]+\.(?:js|mjs|cjs|jsx|sh))`/g)].map((m) => m[1] ?? ''),
+    );
+    for (const f of files) {
+      if (/\.(js|mjs|cjs|jsx|sh)$/.test(f) && !allowed.has(f))
+        err(
+          f,
+          'core.typescript-only: tracked JavaScript or shell file that is not on the allowlist in standards/core.json',
+        );
+    }
+    for (const f of allowed) {
+      if (!files.includes(f))
+        err(
+          'standards/core.json',
+          `core.typescript-only allows ${f}, but it is not tracked; remove it from the rule`,
+        );
+    }
+  }
+}
+
+const errors = findings.filter((f) => f.level === 'error');
+const warnings = findings.filter((f) => f.level === 'warn');
+for (const f of [...errors, ...warnings])
+  console.log(`${f.level.toUpperCase().padEnd(5)} ${f.file}: ${f.msg}`);
+console.log(
+  `check-docs: ${errors.length} error(s), ${warnings.length} warning(s), ${docs.length} doc file(s) scanned`,
+);
 process.exit(errors.length > 0 || (strict && warnings.length > 0) ? 1 : 0);

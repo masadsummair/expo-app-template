@@ -38,7 +38,9 @@ describe('loadStandards', () => {
   });
 
   test('rejects an enforcement key that is a typo (strict objects)', () => {
-    const design = { rules: { 'design.x': rule({ enforcement: { kind: 'script', chek: 'docs:check' } }) } };
+    const design = {
+      rules: { 'design.x': rule({ enforcement: { kind: 'script', chek: 'docs:check' } }) },
+    };
     expect(() => loadStandards(tempRoot({ design }))).toThrow(/standards\/design\.json/);
   });
 
@@ -85,7 +87,11 @@ describe('renderStandards', () => {
 
 describe('AGENTS.md', () => {
   const text = readFileSync(join(ROOT, 'AGENTS.md'), 'utf8');
-  const tags = [...text.matchAll(/\[((?:core|intake|backport|auth|release|design|supabase|firebase)\.[a-z0-9-]+)\]/g)].map((m) => m[1]!);
+  const tags = [
+    ...text.matchAll(
+      /\[((?:core|intake|backport|auth|release|design|supabase|firebase)\.[a-z0-9-]+)\]/g,
+    ),
+  ].map((m) => m[1]!);
 
   test('cites at least one rule by its [rule.id]', () => {
     expect(tags.length).toBeGreaterThan(0);
@@ -93,7 +99,11 @@ describe('AGENTS.md', () => {
 
   test('every [rule.id] tag names a rule that exists', () => {
     const s = loadStandards(ROOT);
-    const known = new Set([...Object.keys(s.core.rules), ...Object.keys(s.design.rules), ...Object.keys(s.variant.rules)]);
+    const known = new Set([
+      ...Object.keys(s.core.rules),
+      ...Object.keys(s.design.rules),
+      ...Object.keys(s.variant.rules),
+    ]);
     for (const tag of tags) expect(known.has(tag)).toBe(true);
   });
 });

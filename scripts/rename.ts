@@ -18,7 +18,11 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const root = join(import.meta.dir, '..');
-const TEMPLATE = { id: 'com.example.expoapptemplate', name: 'Expo App Template', slug: 'expo-app-template' };
+const TEMPLATE = {
+  id: 'com.example.expoapptemplate',
+  name: 'Expo App Template',
+  slug: 'expo-app-template',
+};
 
 const flags = new Map<string, string>();
 const argv = process.argv.slice(2);
@@ -42,21 +46,29 @@ if (!id || !name || !slug) {
   fail('usage: bun scripts/rename.ts --id com.acme.app --name "Acme" --slug acme [--write]');
 }
 if (!/^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*)+$/.test(id)) {
-  fail(`--id "${id}" must be reverse-DNS: lowercase letters and digits, dot-separated, 2+ segments, each starting with a letter (e.g. com.acme.app). No underscores: iOS bundle ids reject them.`);
+  fail(
+    `--id "${id}" must be reverse-DNS: lowercase letters and digits, dot-separated, 2+ segments, each starting with a letter (e.g. com.acme.app). No underscores: iOS bundle ids reject them.`,
+  );
 }
 const JAVA_RESERVED = new Set(
-  ('abstract assert boolean break byte case catch char class const continue default do double else enum extends final ' +
+  (
+    'abstract assert boolean break byte case catch char class const continue default do double else enum extends final ' +
     'finally float for goto if implements import instanceof int interface long native new package private protected ' +
     'public return short static strictfp super switch synchronized this throw throws transient try void volatile while ' +
-    'true false null').split(' '),
+    'true false null'
+  ).split(' '),
 );
 const reserved = id.split('.').find((segment) => JAVA_RESERVED.has(segment));
-if (reserved) fail(`--id "${id}" has the segment "${reserved}", a Java reserved word: the Android package name would be invalid.`);
+if (reserved)
+  fail(
+    `--id "${id}" has the segment "${reserved}", a Java reserved word: the Android package name would be invalid.`,
+  );
 if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
   fail(`--slug "${slug}" must be lowercase letters, digits and single hyphens (e.g. acme-app).`);
 }
 const scheme = slug.replaceAll('-', '');
-if (!/^[a-z]/.test(scheme)) fail(`--slug "${slug}" must start with a letter: the URL scheme (${scheme}) has to.`);
+if (!/^[a-z]/.test(scheme))
+  fail(`--slug "${slug}" must start with a letter: the URL scheme (${scheme}) has to.`);
 if (/[\r\n\\']/.test(name) || name.length > 30) {
   fail('--name must be one line, at most 30 characters, without quotes or backslashes.');
 }
@@ -67,7 +79,8 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // What the app is called now, read from app.config.ts so the guard and the replacements agree with the code.
 const configPath = join(root, 'app.config.ts');
-if (!existsSync(configPath)) fail('app.config.ts not found; run this from a checkout of the template.');
+if (!existsSync(configPath))
+  fail('app.config.ts not found; run this from a checkout of the template.');
 const config = text(configPath);
 const current = {
   id: config.match(/const BASE_ID\s*=\s*'([^']+)'/)?.[1],
@@ -83,7 +96,11 @@ if (current.id === id && current.slug === slug && current.name === name.replaceA
   console.log('rename: already named this way, nothing to do.');
   process.exit(0);
 }
-if (current.id !== TEMPLATE.id || current.slug !== TEMPLATE.slug || current.name !== TEMPLATE.name) {
+if (
+  current.id !== TEMPLATE.id ||
+  current.slug !== TEMPLATE.slug ||
+  current.name !== TEMPLATE.name
+) {
   fail(
     `already renamed (app.config.ts has ${current.id} / "${current.name}" / ${current.slug}). ` +
       'This script only converts the untouched template; change the identity by hand from here.',
@@ -106,7 +123,11 @@ const pattern = new RegExp(
 const swap = (s: string) => s.replace(pattern, (m) => map.get(m)!);
 
 const mdFiles = (dir: string): string[] =>
-  existsSync(dir) ? readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) => f.endsWith('.md')).map((f) => join(dir, f)) : [];
+  existsSync(dir)
+    ? readdirSync(dir, { recursive: true, encoding: 'utf8' })
+        .filter((f) => f.endsWith('.md'))
+        .map((f) => join(dir, f))
+    : [];
 
 const edits: { path: string; before: string; after: string }[] = [];
 const edit = (path: string, change: (s: string) => string) => {
@@ -117,7 +138,8 @@ const edit = (path: string, change: (s: string) => string) => {
 };
 /** Replace one capture group; throws if the line the script expects is gone. */
 const setValue = (src: string, re: RegExp, value: string) => {
-  if (!re.test(src)) fail(`expected pattern ${re} not found; the file changed shape, edit it by hand.`);
+  if (!re.test(src))
+    fail(`expected pattern ${re} not found; the file changed shape, edit it by hand.`);
   return src.replace(re, (_, a: string, _old: string, b: string) => `${a}${value}${b}`);
 };
 
@@ -144,10 +166,15 @@ for (const { path, before, after } of edits) {
   const a = before.split(/\r?\n/);
   const b = after.split(/\r?\n/);
   for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) console.log(`  ${String(i + 1).padStart(4)} - ${a[i]}\n  ${String(i + 1).padStart(4)} + ${b[i]}`);
+    if (a[i] !== b[i])
+      console.log(
+        `  ${String(i + 1).padStart(4)} - ${a[i]}\n  ${String(i + 1).padStart(4)} + ${b[i]}`,
+      );
   }
 }
-console.log(`\nrename: ${edits.length} file(s) ${write ? 'updated' : 'would change'}: id ${id}, name "${name}", slug ${slug}, scheme ${scheme}://`);
+console.log(
+  `\nrename: ${edits.length} file(s) ${write ? 'updated' : 'would change'}: id ${id}, name "${name}", slug ${slug}, scheme ${scheme}://`,
+);
 
 if (!write) {
   console.log('Dry run. Re-run with --write to apply.');

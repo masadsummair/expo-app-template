@@ -2,25 +2,25 @@
 
 ## What you need
 
-| | macOS | Linux | Windows |
-|---|---|---|---|
-| Always | bun ≥ 1.3.7, Node ≥ 22.12, Git | same | same, plus Git for Windows (Claude Code uses its bash) |
-| Android | Android Studio + SDK and its JDK | same | same; keep the repo path short (long paths break native builds) |
-| iOS | Xcode ≥ 26.4 (older toolchains fail, see "Known build failures" in the `release` skill) | EAS cloud build only | EAS cloud build only |
-| `ANDROID_HOME` | `~/Library/Android/sdk` | `~/Android/Sdk` | `%LOCALAPPDATA%\Android\Sdk` |
-| `JAVA_HOME` | `/Applications/Android Studio.app/Contents/jbr/Contents/Home` | Android Studio's `jbr` folder | `C:\Program Files\Android\Android Studio\jbr` |
-| e2e tests | iOS and Android | Android | inside WSL2 (upstream: "On Windows, run inside WSL") |
+|                | macOS                                                                                   | Linux                         | Windows                                                         |
+| -------------- | --------------------------------------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------- |
+| Always         | bun ≥ 1.3.7, Node ≥ 22.12, Git                                                          | same                          | same, plus Git for Windows (Claude Code uses its bash)          |
+| Android        | Android Studio + SDK and its JDK                                                        | same                          | same; keep the repo path short (long paths break native builds) |
+| iOS            | Xcode ≥ 26.4 (older toolchains fail, see "Known build failures" in the `release` skill) | EAS cloud build only          | EAS cloud build only                                            |
+| `ANDROID_HOME` | `~/Library/Android/sdk`                                                                 | `~/Android/Sdk`               | `%LOCALAPPDATA%\Android\Sdk`                                    |
+| `JAVA_HOME`    | `/Applications/Android Studio.app/Contents/jbr/Contents/Home`                           | Android Studio's `jbr` folder | `C:\Program Files\Android\Android Studio\jbr`                   |
+| e2e tests      | iOS and Android                                                                         | Android                       | inside WSL2 (upstream: "On Windows, run inside WSL")            |
 
 `.node-version` pins Node 24. Shell snippets in the skills are bash; in PowerShell write `$env:NAME = 'x'` instead of
 `NAME=x cmd`.
 
 ## Host OS support
 
-| Host OS | Run the app | iOS build | Android build | e2e + `e2e` MCP |
-|---|---|---|---|---|
-| macOS | iOS simulator, Android | local (Xcode) or EAS | local or EAS | iOS and Android |
-| Linux | Android | EAS cloud only | local or EAS | Android |
-| Windows | Android | EAS cloud only | local or EAS | WSL2 only (upstream: "run inside WSL") |
+| Host OS | Run the app            | iOS build            | Android build | e2e + `e2e` MCP                        |
+| ------- | ---------------------- | -------------------- | ------------- | -------------------------------------- |
+| macOS   | iOS simulator, Android | local (Xcode) or EAS | local or EAS  | iOS and Android                        |
+| Linux   | Android                | EAS cloud only       | local or EAS  | Android                                |
+| Windows | Android                | EAS cloud only       | local or EAS  | WSL2 only (upstream: "run inside WSL") |
 
 - `bun run ios`, `xcrun`, `xed` and `pod` need macOS; elsewhere build iOS on EAS
   (`bun run eas build --profile development-device --platform ios`; always pass `--profile`, the default is production).

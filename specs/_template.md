@@ -17,9 +17,9 @@ One or two sentences: what the user can do afterwards that they could not before
 
 ## Screens / routes
 
-| Route | New or changed | Purpose |
-|---|---|---|
-| `src/app/(app)/<name>.tsx` | new | ... |
+| Route                      | New or changed | Purpose |
+| -------------------------- | -------------- | ------- |
+| `src/app/(app)/<name>.tsx` | new            | ...     |
 
 ## Data
 
@@ -30,8 +30,8 @@ One or two sentences: what the user can do afterwards that they could not before
 
 Each row is observable by a user and gets exactly one e2e test named `AC-<n>: <criterion>`.
 
-| ID | Given / When / Then | testIDs | Test | Result |
-|---|---|---|---|---|
+| ID   | Given / When / Then           | testIDs              | Test                | Result  |
+| ---- | ----------------------------- | -------------------- | ------------------- | ------- |
 | AC-1 | Given ..., when ..., then ... | `<screen>-<element>` | `e2e/<slug>.e2e.ts` | not run |
 
 ## Test plan
