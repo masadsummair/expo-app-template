@@ -4,35 +4,41 @@ Provider-neutral. The backend-specific steps (where to paste the Web client ID a
 
 ## What you create
 
-- One Google Cloud project for the app.
-- One OAuth consent screen.
+In the Google Cloud project your backend trusts:
+
+- One OAuth consent screen (in Google Auth Platform: Branding, Audience, Data Access).
 - One **Web** client. Its ID is the audience of the ID tokens your backend verifies, and native libraries take it as `webClientId`.
-- One **iOS** client per iOS bundle ID (one per build variant).
-- One **Android** client per package name and signing-certificate SHA-1 pair.
+- One **iOS** client per iOS bundle ID you use.
+- One **Android** client per package name and signing-certificate SHA-1 pair you use.
+
+Recommended hardening (inferred, not a Google requirement): keep the public debug SHA-1 out of the project your production backend trusts. Either use separate development and production projects, or remove the debug client before release.
 
 Client IDs are public identifiers, not secrets. The Web client **secret** belongs in your backend's provider settings only. Never put it in the app or in a public environment variable.
 
 ## 1. Cloud project
 
-1. Open the Google Cloud console and create a project (one per app, not per environment).
+1. Open the Google Cloud console and create a project. Spike S1 used a project with no billing account and Google sign-in worked; Google does not document this, so treat it as observed.
+   - The debug keystore is public. If its Android client sits in the same project as the production Web client, a look-alike app signed with it might get ID tokens that your production backend accepts (ADR 0004). Google documents that the server (Web) client must be in the same project as the Android client, and that Android apps are identified by package name and SHA-1 ([source](https://android-developers.googleblog.com/2016/03/registering-oauth-clients-for-google.html)). It does not document that such a pair can get tokens for the Web client, so the attack is inferred and spike S1 did not test it.
+   - To follow the hardening above with two projects, register the debug keystore's SHA-1 in the development project only, repeat the steps below in each project, and point each backend at its own Web client.
+   - With two projects, a build uses the Google project that matches the backend it talks to. A preview build that uses the development backend uses the development project, and its SHA-1 and bundle ID go there.
 2. Open Google Auth Platform (the former "APIs & Services, OAuth consent screen" area).
 
 ## 2. Consent screen
 
 1. User type: **External**.
 2. App name, support email, developer contact, and the authorized domains you own.
-3. Scopes: `openid`, `email`, `profile`. These are non-sensitive, so no Google verification review is needed. UNVERIFIED: console wording changes often, check the current screen.
-4. While the publishing status is **Testing**, only listed test users can sign in. Add your testers, and set the status to **In production** before the first public release.
+3. Scopes: `openid`, `email`, `profile`. These are non-sensitive, so no mandatory app verification is needed. Optional brand verification only lets the consent screen show your app name and logo ([Google](https://support.google.com/cloud/answer/13463073)). Console wording changes often, check the current screen.
+4. While the publishing status is **Testing**, an app that requests only `openid`, `email` and `profile` needs no test users, shows no unverified-app warning, and its authorizations do not expire after 7 days. The 100-test-user cap applies to other scopes ([Google](https://support.google.com/cloud/answer/15549945)). Set the status to **In production** before the first public release.
 
 ## 3. Web client
 
-1. Create credentials, OAuth client ID, type **Web application**.
-2. A native ID-token flow needs no redirect URI. UNVERIFIED for your backend: some backends ask for one in their own guide.
+1. Google Auth Platform, Clients, Create client, type **Web application**.
+2. A native ID-token flow needs no redirect URI. Redirect URIs matter for server and web flows: Supabase lists its callback URI for its web flow, and says to comma-separate client IDs with the Web client first ([Supabase](https://supabase.com/docs/guides/auth/social-login/auth-google)). Firebase: UNVERIFIED.
 3. Copy the client ID into the app's public environment variables (`EXPO_PUBLIC_` prefix, set per build environment) and the ID plus secret into the backend provider settings. The variant's setup guide names the exact keys.
 
 ## 4. iOS client, per build variant
 
-1. Create credentials, type **iOS**, with the bundle ID of the variant (development, preview and production usually differ, for example by a `.dev` suffix).
+1. Google Auth Platform, Clients, Create client, type **iOS**, with the bundle ID of the variant (development, preview and production usually differ, for example by a `.dev` suffix).
 2. Copy the iOS client ID into the public environment variables.
 3. The reversed client ID must be registered as a URL scheme in the iOS build. Missing it crashes the app at sign-in with "missing support for the following URL schemes".
 
@@ -40,16 +46,16 @@ Client IDs are public identifiers, not secrets. The Web client **secret** belong
 
 Create one client per (package name, SHA-1) pair. Each client takes one SHA-1, so a variant with two signing keys needs two clients. The Android client ID is never used in code: Google matches the running app by package name and certificate.
 
-- **Local debug builds:** read the SHA-1 of the debug keystore the build uses.
+- **Local debug builds:** read the SHA-1 of the debug keystore the build uses. This project builds with `android/app/debug.keystore`, generated by prebuild.
 
   ```sh
-  keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+  keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android
   ```
 
-  On Windows the keystore is under `%USERPROFILE%\.android`. React Native's default debug keystore has the same SHA-1 on every machine (`5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`), so never register it on a production client.
+  Its SHA-1 matches the constant below. `~/.android/debug.keystore` is Android Studio's per-machine key, a different file. React Native's default debug keystore has the same SHA-1 on every machine (`5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`), so do not register it in the project your production backend trusts (the hardening above). The generated `android/app/build.gradle` signs the `release` build type with the debug key too, unless you configure a release keystore (observed in the prebuild output; release signing: [Android](https://developer.android.com/studio/publish/app-signing)).
 
 - **EAS builds:** EAS holds the keystore it signs with (generated by EAS, or one you uploaded). Run `bun run eas credentials`, pick Android and the build profile, and read that keystore's SHA-1. UNVERIFIED: menu names.
-- **Play App Signing:** Google re-signs releases that come from Play. In the Play Console open App integrity, App signing, and copy the **app signing key certificate** SHA-1. It differs from your upload key. Register both: the upload key covers a release build you install yourself, the app signing key covers installs from Play (internal testing included).
+- **Play App Signing (optional):** only if you publish through Google Play, which needs a paid Play Console account. Google re-signs releases that come from Play. In the Play Console open App integrity, App signing, and copy the **app signing key certificate** SHA-1. It differs from your upload key. Register both: the upload key covers a release build you install yourself, the app signing key covers installs from Play (internal testing included).
 
 ## 6. Environment keys
 
@@ -60,21 +66,31 @@ Create one client per (package name, SHA-1) pair. Each client takes one SHA-1, s
 
 ## 7. Nonce
 
-Generate a fresh random nonce for every attempt. Give Google the SHA-256 (hex) of it and give your backend the raw value. The backend compares the hash of the raw nonce with the claim in the ID token. Never send a cached ID token to the backend: a cached token carries an old nonce or none.
+Generate a fresh random nonce for every attempt. Give Google the SHA-256 (hex) of it and give your backend the raw value. With Supabase, which this was checked against, the backend compares the SHA-256 (hex) of the raw nonce with the claim in the ID token. Firebase `GoogleAuthProvider.credential(idToken)` takes no nonce (ADR 0004, unverified); check your backend. Never send a cached ID token to the backend: a cached token carries an old nonce or none.
 
 ## 8. Account deletion
 
 When the user deletes their account, also revoke the app's access to their Google account, so the app disappears from their Google account permissions.
 
-## Triage: `DEVELOPER_ERROR` and instant "cancelled"
+## Triage: configuration errors and unexpected "cancelled"
 
-`DEVELOPER_ERROR` (status code 10) on Android, or a sign-in that cancels immediately, is a configuration problem until proven otherwise. Candidate library 2.3.0 reports some Android misconfigurations as `cancelled` and does not surface native error codes to JavaScript (static audit, to be confirmed on a device).
+With `react-native-nitro-google-signin` 2.3.0, a configuration problem reaches JavaScript as a plain `Error` with `code: null`. The native code appears only in the message. Spike S1 saw two configuration cases on an emulator and a simulator (ADR 0004), listed below with the offline case. In both, the "wrong" ID was a well-formed client ID that does not exist. Using the Android or iOS client ID as `webClientId` (item 3 below) was not tested and may fail differently.
+
+- **Android, wrong Web client ID, account on the device:** `[28444] Developer console is not set up correctly`.
+- **iOS, wrong Web client ID:** `invalid_audience` after the account is picked.
+- **Android, no network, account on the device:** `[28404] Failed to retrieve an ID token`. The message also gives SHA-1 advice that does not apply here, so check connectivity before the SHA-1.
+
+Read the message only to diagnose, never to drive app logic (ADR 0004).
+
+A sign-in that comes back `cancelled` when the user did not cancel is, once the network is ruled out, a configuration problem until proven otherwise. S1 did not see a misconfiguration produce `cancelled` by itself. With a wrong Web client ID and no account, it reached Google's add-account screen, where pressing Back gave `cancelled`. The library source says a wrong Web client ID, SHA-1 or package name can return `cancelled` even after an account is picked; S1 did not test that.
+
+First rule out the network: with no connection, Android can report `[28404]` with misleading SHA-1 advice. Then check these causes:
 
 1. SHA-1 mismatch: debug vs EAS vs Play App Signing. Compare the SHA-1 of the build you installed with the client.
 2. Package name mismatch: the `.dev` build id differs from the production one.
 3. `webClientId` set to the Android or iOS client ID. It must be the **Web** client ID.
-4. The client was just created. Propagation can take minutes to hours. UNVERIFIED: exact delay.
-5. The account is not a listed test user while the consent screen is in Testing.
+4. The client was just created. Google documents 5 minutes to a few hours for changes to a Web client's origins and redirect URIs ([Google](https://support.google.com/cloud/answer/6158849)); the delay for a new native client is UNVERIFIED (assumed similar).
+5. The app requests scopes beyond `openid`, `email` and `profile`, the consent screen is in Testing, and the account is not a listed test user. Basic scopes need no test users.
 6. The emulator image has no Google Play services. Use a "Google APIs" or "Google Play" image.
 7. iOS: wrong bundle ID on the iOS client, iOS client ID not configured, or the reversed client ID URL scheme missing.
 

@@ -19,7 +19,7 @@ Where a variant needs server-side power, it uses what the provider already runs:
 ## Consequences
 
 - No privileged key (service role, `.p8`, admin SDK credential) ever appears in the template or in an app's JS bundle.
-- The Supabase variant cannot revoke Apple tokens by itself. The App Store requires revocation on account deletion, so `docs/auth/apple-setup.md` makes the pattern doc a required step before store submission.
+- The Supabase variant cannot revoke Apple tokens by itself. Apple says apps "should" revoke on account deletion ([Apple](https://developer.apple.com/support/offering-account-deletion-in-your-app/); TN3194 gives a manual fallback when no token is held), so `docs/auth/apple-setup.md` points to the pattern doc before store submission as expected, not a documented hard gate.
 - Apps that need a server add it themselves, outside the template.
 
 ## Alternatives considered

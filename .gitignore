@@ -53,7 +53,34 @@ src/uniwind-types.d.ts
 .e2e/
 
 # Firebase config and store/service credentials
-google-services.json
-GoogleService-Info.plist
+google-services*.json
+GoogleService-Info*.plist
 *service-account*.json
+*service_account*.json
+serviceAccount*.json
+*firebase-adminsdk*.json
 play-store-key*.json
+# Google OAuth client download (contains the client secret)
+client_secret*.json
+# Firebase CLI: project alias (real project ID), hosting cache, emulator logs and exports
+.firebaserc
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+database-debug.log
+pubsub-debug.log
+firebase-export-*/
+
+# Supabase CLI local state (linked project ref, branches)
+supabase/.temp/
+supabase/.branches/
+
+# Sentry CLI auth (tokens)
+sentry.properties
+.sentryclirc
+
+# Local build artifacts (eas build --local)
+*.apk
+*.aab
+*.ipa

@@ -10,7 +10,7 @@ permission flow can be verified on an emulator; real remote delivery only on a p
 
 ## 0. Preconditions — stop and ask if any fail
 
-- `EAS_PROJECT_ID` in `app.config.ts` is set (`bun run eas init` prints it). The token call needs it; without it the code below
+- `EAS_PROJECT_ID` is set in `.env` and exported in your shell (`bun run eas init` prints it; `docs/setup.md`). The token call needs it; without it the code below
   returns `no-project-id` and shows a clear message instead of failing obscurely.
 - The `deep-links` skill's `src/lib/deep-link.ts` (`toInternalPath`) exists. It is not in the template: you create it
   by following that skill, because notification taps reuse it. Do that first.

@@ -8,8 +8,11 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 // Rename the app with `bun scripts/rename.ts --id com.acme.app --name "Acme" --slug acme` (see its header).
 const BASE_ID = 'com.example.expoapptemplate';
 const BASE_NAME = 'Expo App Template';
-// Set after `bun run eas init` prints your project id. Enables EAS Update (OTA).
-const EAS_PROJECT_ID = '';
+// Your EAS project id, never committed (docs/setup.md). Expo CLI reads it from your gitignored `.env`; EAS CLI
+// commands need it exported in the shell, and EAS build workers set EAS_BUILD_PROJECT_ID. Without it every
+// project-scoped EAS command (build, update, env, fingerprint) fails and there is no `updates.url`.
+// `||`, not `??`: a copied `.env.example` sets an empty EAS_PROJECT_ID, which must still fall through.
+const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || process.env.EAS_BUILD_PROJECT_ID || '';
 
 const variants = {
   development: { id: `${BASE_ID}.dev`, name: `${BASE_NAME} (Dev)` },
@@ -56,10 +59,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // use 'default' here and set ios.supportsTablet below to true, then re-test every screen at tablet widths and in landscape.
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  // Must stay lowercase — uppercase schemes break EAS Update publishing.
+  // Expo requires the scheme to be lowercase.
   scheme: 'expoapptemplate',
   userInterfaceStyle: 'automatic',
-  // Fingerprint ties OTA updates to the exact native build they are compatible with.
+  // Fingerprint ties OTA updates to the exact native build they are compatible with. Expo's deployment guide calls
+  // this policy "experimental and not yet widely recommended"; the SDK 57 reference documents it without that label.
   runtimeVersion: { policy: 'fingerprint' },
   ios: {
     bundleIdentifier: variant.id,
@@ -69,7 +73,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: false,
     // Export compliance: HTTPS and OS-provided crypto only. Set true if you add custom encryption.
     infoPlist: { ITSAppUsesNonExemptEncryption: false },
-    // Required-reason APIs used by dependencies (Apple doesn't merge static pods' manifests).
+    // Required-reason APIs used by dependencies (Apple does not correctly parse all static pods' manifests, per Expo's guide).
     // `bun run privacy:check` fails when a newly added native dependency needs more.
     privacyManifests: {
       NSPrivacyAccessedAPITypes: [
@@ -120,7 +124,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-build-properties',
       {
         // R8 minification and resource shrinking for Android release builds (dev builds are unaffected).
-        // Verified by the release-mode e2e run; re-run it (E2E_BUILD=release) after adding a native module.
+        // Run the release-mode e2e (E2E_BUILD=release) after adding a native module to check R8 did not strip anything.
+        // Spike S1 (ADR 0004) exercised R8 minification in a sample app release build, and sign-in worked; resource shrinking was not checked.
         android: { enableMinifyInReleaseBuilds: true, enableShrinkResourcesInReleaseBuilds: true },
       },
     ],

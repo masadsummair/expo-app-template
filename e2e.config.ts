@@ -30,7 +30,8 @@ const devApp = {
 
 // iOS dev-client opens the server straight from launch arguments and turns the dev menu off.
 // Android's expo-dev-launcher ignores --initialUrl; open-app.ts connects it with device.openLink.
-// Verified on an iOS 26.2 simulator with an EAS-built dev client (2026-10-06). Local iOS builds need Xcode >= 26.4.
+// Verified on an iOS 26.2 simulator with an EAS-built dev client (2026-10-06). Local iOS build failures with an
+// older Xcode: see the release skill's "Known build failures" (no documented minimum; EAS's sdk-57 image uses 26.6).
 const iosDevLaunchArguments = [
   '--initialUrl',
   'http://localhost:8081',
