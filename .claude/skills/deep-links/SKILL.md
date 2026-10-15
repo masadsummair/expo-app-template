@@ -127,11 +127,11 @@ Use `encodeURIComponent(id)` when building an API path from it (`api-endpoint` s
 
 ## 4. Native config — `app.config.ts`
 
-- `scheme: 'expoapptemplate'` — lowercase only (uppercase breaks EAS Update). All three variants share it, so with
+- `scheme: 'expoapptemplate'` — lowercase only (Expo requires it). All three variants share it, so with
   dev + preview installed together the OS may open either. If that bites, propose per-variant schemes
   (`expoapptemplate-dev`) — a design decision for the human, not a silent change. The dev client also registers
   `exp+expo-app-template`.
-- Verified https links (needs a domain you control):
+- Verified https links (needs a domain you control; on iOS the Associated Domains capability needs a paid Apple Developer Program membership, per Apple's [capabilities table](https://developer.apple.com/help/account/reference/supported-capabilities-ios)):
 
 ```ts
 ios: { associatedDomains: ['applinks:example.com'] },          // no https://
@@ -151,7 +151,7 @@ Merge into the existing `ios` / `android` objects in `app.config.ts` (do not ove
 Host `/.well-known/apple-app-site-association` (appID `TEAMID.<bundle id>`, HTTPS, no redirect) and
 `/.well-known/assetlinks.json` (package name + signing-cert SHA-256, from `bun run eas credentials -p android` or
 Play Console app signing). Bundle ids differ per `APP_ENV`, so each variant you want links for must be listed in both
-files. iOS fetches the AASA at install/update only; a path change needs a store release.
+files. When iOS re-fetches the AASA, and so whether a path change needs a store release, is UNVERIFIED.
 
 **These native fields change the fingerprint: a new build is required, an OTA will not carry them** (`release` skill).
 

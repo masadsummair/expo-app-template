@@ -8,7 +8,7 @@ supabase-js persists the session (access and refresh tokens) through a storage a
 
 ## Decision
 
-Store the session in MMKV, encrypted with a random key that lives in `expo-secure-store` with `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`. If decryption fails, treat the user as signed out and start clean.
+Store the session in MMKV, encrypted with a 32-character key (AES-256; 16 random bytes as hex, so 128 bits of entropy) that lives in `expo-secure-store` with `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`. If decryption fails, treat the user as signed out and start clean.
 
 Client options: `autoRefreshToken`, `persistSession`, `detectSessionInUrl: false`. `startAutoRefresh` and `stopAutoRefresh` follow `AppState`, with the listener registered once.
 

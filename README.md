@@ -6,9 +6,9 @@ portrait.
 
 - **Stack:** Expo SDK 57 · React Native 0.86 · React 19.2 (React Compiler) · TypeScript · Expo Router · Uniwind
   (Tailwind 4) · TanStack Query · Zustand · React Hook Form + zod · bun
-- **Runs on:** macOS, Linux and Windows. iOS builds without a Mac go through EAS. iPad runs the iPhone layout.
-- **Checked:** on macOS (iOS simulator, Android emulator); the checks also passed on Windows and Linux, and the e2e
-  suite on a Linux Android emulator. Not yet checked: a physical iPhone, screen readers by ear, haptics feel.
+- **Built for:** macOS, Linux and Windows. iOS builds without a Mac go through EAS. iPad runs the iPhone layout.
+- **Checked:** on macOS (iOS simulator, Android emulator). Windows and Linux ran the checks in GitHub Actions CI until
+  it was removed on 2026-10-07; not re-checked since. Not yet checked: a physical iPhone, screen readers by ear, haptics feel.
 
 ## Quick start
 
@@ -34,7 +34,7 @@ cp .env.example .env # set EXPO_PUBLIC_API_URL
 bun run android      # or: bun run ios (macOS)
 ```
 
-Then, from [docs/setup.md](docs/setup.md): connect EAS (step 3), replace the mock sign-in (step 6) and, optionally, set
+Then, from [docs/setup.md](docs/setup.md): set env vars (step 3), connect EAS when you need cloud builds or OTA (step 4), replace the mock sign-in (step 6) and, optionally, set
 up Sentry (step 7).
 
 ## Daily workflow

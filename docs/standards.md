@@ -34,7 +34,7 @@ Cite a rule as `path:line [rule.id]`.
 
 Where Google sign-in is offered on iOS, Sign in with Apple is offered too.
 
-- Why: App Store guideline 4.8 requires an equivalent privacy-focused login next to any third-party login.
+- Why: App Store guideline 4.8 requires an equivalent privacy-focused login option when a third-party login (such as Google) sets up or authenticates the user's primary account, with listed exemptions; Sign in with Apple is one such option (docs/auth/apple-setup.md).
 - Enforced by: agent: mobile-security-auditor
 
 ### auth.nonce

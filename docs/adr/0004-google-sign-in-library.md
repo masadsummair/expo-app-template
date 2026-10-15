@@ -71,7 +71,7 @@ They may show who is signed in. They are never sent to a backend. Android `signI
 
 **Supabase**
 
-- Keep the nonce check on (`skip_nonce_check = false`). [Supabase's Google guide](https://supabase.com/docs/guides/auth/social-login/auth-google) suggests turning it off for iOS native sign-in. That comes from the research step on 2026-10-15, not from S1. S1 shows iOS passes with the check on.
+- Keep the nonce check on (`skip_nonce_check = false`). [Supabase's Google guide](https://supabase.com/docs/guides/auth/social-login/auth-google) tells its Flutter and Swift readers to enable `Skip nonce check` for iOS, and its Expo React Native tab notes the check can be disabled. Do not follow that here: S1 shows iOS passes with the check on.
 - The token's `aud` was the Web client ID on both platforms. PR6 tests whether listing only the Web client ID is enough; S1 listed all three.
 
 **Supply chain**
@@ -129,8 +129,8 @@ These were sent from the Android build with a fresh token, 11 seconds old.
 
 - physical devices;
 - the iOS cached token after expiry;
-- Play App Signing and upload-key SHA-1s (S1 signed debug and release with the same key; Play Console is a paid account, needed only to publish on Play);
-- TestFlight (needs the paid Apple Developer Program, needed only to ship on iOS);
+- Play App Signing and upload-key SHA-1s (S1 signed debug and release with the same key; Play Console is a paid account, needed to publish on Play and to set up App Check with Play Integrity);
+- TestFlight (needs the paid Apple Developer Program, which is also needed to enable Sign in with Apple and App Attest);
 - hosted Supabase;
 - Firebase;
 - `revokeAccess()`, on either platform;
@@ -180,5 +180,5 @@ PR6 and PR7 are not done until each item below that names them ships with a test
   - If Firebase accepts it without checking the nonce, "never send a cached token" is the only replay defence, and PR7 says so.
   - If a credential with `rawNonce` exists in RNFB 26.4 (to be confirmed against its types), PR7 adds a test that a wrong `rawNonce` is rejected.
   - Firebase cannot revoke a session server-side without the Admin SDK (research, not tested). PR7 documents this.
-- **Android OAuth clients (release routine).** S1 did not test this. Register one Android OAuth client per signing certificate. That means the release keystore, plus the Play App Signing certificate only if you publish through Play, which needs a paid Play Console account. Use separate Google Cloud and backend projects for development and production, and register the debug SHA-1 in the development project only. The debug keystore is public. If its Android client sat in the same project as the production Web client, a look-alike app signed with that key could get tokens your production backend accepts. Separate projects cost nothing on Google Cloud without billing enabled (research; S1's project had no billing). `docs/auth/google-setup.md` gives the steps.
+- **Android OAuth clients (release routine).** S1 did not test this. Register one Android OAuth client per signing certificate. That means the release keystore, plus the Play App Signing certificate only if you publish through Play, which needs a paid Play Console account. Recommended hardening (this template's choice, inferred, not a Google requirement): keep the public debug SHA-1 out of the project your production backend trusts, either with separate Google Cloud and backend projects for development and production (debug SHA-1 in the development project only) or by removing the debug client before release. The debug keystore is public. If its Android client sat in the same project as the production Web client, a look-alike app signed with that key might get tokens your production backend accepts. Google documents that the Android and Web clients must share a project and that Android apps are identified by package name and SHA-1; it does not document that such a pair can get tokens for the Web client, so the attack is untested. S1's project had no billing and Google sign-in worked; Google does not document that it needs none. `docs/auth/google-setup.md` gives the steps.
 - **Revisit** after 90 days without a release, if Universal's licence changes, or if the Original library merges nonce support and Credential Manager. The `google-signin-library` pattern doc explains how to switch.

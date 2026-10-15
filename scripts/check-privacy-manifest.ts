@@ -1,7 +1,7 @@
 /**
  * Fails when an installed native dependency declares a required-reason API (in its
- * PrivacyInfo.xcprivacy) that app.config.ts `ios.privacyManifests` does not list. Apple doesn't merge
- * the manifests of static CocoaPods dependencies, and a missing reason gets the build rejected by
+ * PrivacyInfo.xcprivacy) that app.config.ts `ios.privacyManifests` does not list. Per Expo, Apple does not
+ * correctly parse all the manifests of static CocoaPods dependencies, and a missing reason gets the build rejected by
  * App Store Connect (https://docs.expo.dev/guides/apple-privacy/).
  * Run: bun scripts/check-privacy-manifest.ts (part of `bun run verify`).
  */

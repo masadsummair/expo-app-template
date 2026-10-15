@@ -21,7 +21,7 @@ The client deletes an account in three steps: call the RPC, call Google `revokeA
 
 - Deletion needs no server, no service key and no extra deploy step beyond running the migration.
 - The function is the privileged surface of the variant, so the `mobile-security-auditor` checklist covers the deletion flow and the rules in the migrations.
-- Apple token revocation is not covered. The `apple-token-revocation` pattern doc describes the server piece an app must add before App Store submission.
+- Apple token revocation is not covered. The `apple-token-revocation` pattern doc describes the server piece an app should add before App Store submission (Apple says apps "should" revoke, [Apple](https://developer.apple.com/support/offering-account-deletion-in-your-app/); TN3194 gives a manual fallback when no token is held).
 
 ## Alternatives considered
 
