@@ -8,7 +8,7 @@ allowed-tools: "Bash(bun run eas whoami), Bash(bun run eas update:list *), Bash(
 
 # EAS Update
 
-> **Template override:** Run EAS CLI as `bun run eas <command>` (the `eas` script pins eas-cli; Expo advises against installing it in the project) wherever this skill shows bare `eas`, `npx eas-cli@latest` or `npm install -g eas-cli`; do not install it globally. Publishing rules for this template are in the `release` skill; it wins on conflict.
+> **Template override:** Run EAS CLI as `bun run eas <command>` wherever this skill shows bare `eas`, `npx eas-cli@latest` or `npm install -g eas-cli`; do not install it globally. Publishing rules for this template are in the `release` skill; it wins on conflict.
 
 > **EAS service - costs apply.** EAS Update is available on the Free plan; publishing and delivery use update, bandwidth, and storage allowances, with higher limits on paid plans. See https://expo.dev/pricing.
 

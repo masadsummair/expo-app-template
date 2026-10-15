@@ -1,7 +1,7 @@
 ---
 name: release
 description: Cut a build, submit to the stores, publish/promote/roll back an OTA update, bump versions, or decide whether a change can ship over the air. Use for "release", "eas build", "eas submit", "eas update", "rollback", "bump version". Not for local dev builds (expo-dev-client), EAS Update concepts (eas-update), store listings (eas-app-stores), or env vars (env-secrets).
-allowed-tools: "Bash(bun run eas whoami), Bash(bun run eas build:list *), Bash(bun run eas build:version:get *), Bash(bun run eas update:list *), Bash(bun run eas update:view *), Bash(bun run eas channel:list *), Bash(bun run eas channel:view *), Bash(bun run eas fingerprint:generate *), Bash(bun run eas fingerprint:compare *), Bash(bun run eas * --help)"
+allowed-tools: "Bash(bun run eas whoami), Bash(bun run eas build:list *), Bash(bun run eas build:version:get *), Bash(bun run eas update:list *), Bash(bun run eas update:view *), Bash(bun run eas channel:list *), Bash(bun run eas channel:view *), Bash(bun run eas * --help)"
 ---
 
 # Release
@@ -13,9 +13,9 @@ vendored skills say `npx`; here it is always `bun run eas ...` (the `eas` script
 
 `build --profile production`, `submit`, any `eas update` to `preview` or `production`, `update:republish`,
 `update:rollback`, `update:roll-back-to-embedded`, `channel:edit`, `channel:rollout`, `env:set`/`env:delete`
-on `production`. They are not pre-approved in this skill — every one prompts. State the exact command and what it
-affects (channel, platform, environment), then wait. `eas credentials`, the first Play Console upload and the first
-iOS credential prompts are interactive: stop and hand them to the human.
+on `production`. They are not pre-approved in this skill. In Claude Code the guard hook (`.claude/hooks/guard-bash.ts`)
+asks for each; Codex has no such hook, so ask first. State the exact command and what it affects (channel, platform,
+environment), then wait. `eas credentials` and the iOS credential prompts are interactive: stop and hand them to the human.
 
 You never push, tag, or merge as part of a release unless asked; use the git workflow in `AGENTS.md`.
 
@@ -23,7 +23,7 @@ You never push, tag, or merge as part of a release unless asked; use the git wor
 
 | Profile | Channel | APP_ENV / bundle id | Use for |
 |---|---|---|---|
-| `development`, `development-device` | `development` | development / `….dev` | dev client (internal) |
+| `development`, `development-device` | `development` (no effect: `channel` is ignored when `developmentClient` is true) | development / `….dev` | dev client (internal) |
 | `preview` | `preview` | preview / `….preview` | internal QA build; acts as staging |
 | `production` | `production` | production / `com.example.expoapptemplate` | stores; `autoIncrement` on |
 
@@ -39,6 +39,7 @@ Blocks below are bash (Git Bash or WSL on Windows). The inline `VAR=value cmd` p
 `$env:APP_ENV = "preview"; $env:EXPO_PUBLIC_APP_ENV = "preview"` first, then run the command.
 
 ```bash
+echo "${EAS_PROJECT_ID:?export EAS_PROJECT_ID first}"  # project-scoped EAS commands below fail without it
 git status --short && git branch --show-current     # clean tree, feature/release branch, not main
 bun run verify                                      # every check in package.json `verify`
 bun run doctor
@@ -47,8 +48,9 @@ bun run eas build:version:get -p all -e production # current remote build number
 bun run eas env:list --environment production      # EXPO_PUBLIC_API_URL must exist; prompts, never add --include-sensitive
 ```
 
-Then check by reading `app.config.ts`: `EAS_PROJECT_ID` is set (otherwise there is no `updates.url` and no OTA);
-`src/app/sign-in.tsx` is no longer the mock (it refuses production builds); no secret sits in `EXPO_PUBLIC_*`
+The first line checks that `EAS_PROJECT_ID` is exported in your shell (`app.config.ts` reads it; the id is never
+committed). Without it every project-scoped EAS command fails with "EAS project not configured" (interactively it first offers to create a new EAS project: answer no) and there is no
+`updates.url`. Then check by reading the code: `src/app/sign-in.tsx` is no longer the mock (it refuses production builds); no secret sits in `EXPO_PUBLIC_*`
 (`env-secrets` skill); the `version` is what you want users to see. If Sentry is configured, remove
 `SENTRY_ALLOW_FAILURE` from `eas.json` `build.base.env` first: while it is set, a failed source-map upload does not fail
 the build, and production crashes arrive unsymbolicated. After `bun run doctor`, run
@@ -59,7 +61,7 @@ the build, and production crashes arrive unsymbolicated. After `bun run doctor`,
 `appVersionSource` is `remote`: `ios.buildNumber` / `android.versionCode` live on EAS and `autoIncrement`
 bumps them on each production build; values in `app.config.ts` are ignored. `version` in `app.config.ts` is
 the user-facing version — change it by hand for a store release, never for an OTA. Inspect or repair counters with
-`build:version:get`, `build:version:set`, `build:version:sync` (run `--help` first; `set` and `sync` write to EAS).
+`build:version:get` and `build:version:set` (run `--help` first; `set` writes to EAS). `build:version:sync` copies remote versions into native code, which has no effect here: `ios/` and `android/` are gitignored, so eas-cli treats the project as managed and skips it (eas-cli 24.11.0 `build/version/sync.ts`).
 
 ## Build
 
@@ -70,16 +72,20 @@ bun run eas build --profile production --platform all       # human gate
 
 - iOS cloud builds need no local Xcode. Local `bun run ios` needs macOS and Xcode (`xcodebuild -version`). Windows and Linux build iOS only in the cloud.
 - `eas.json` pins only `node`. To pin the build image to the SDK, add `"image": "sdk-57"` to `build.base` — ask first.
-- First iOS build: EAS prompts for Apple credentials interactively. Hand over.
+- iOS device and store builds prompt for Apple credentials interactively: hand over. Simulator builds (`development` profile, `ios.simulator: true`) need no Apple account.
 - Smoke-test the exact preview build on a device before publishing to production. Its app id is
   `com.example.expoapptemplate.preview`, not the `.dev` id. Local release e2e builds with Gradle, not an EAS profile.
 
 ## Submit (human gate)
 
-`submit.production` in `eas.json` is empty. Fill what applies, never guess values:
+`submit.production` in `eas.json` is empty. Store submission needs a Google Play developer account (US$25 one-time
+registration, [Google](https://support.google.com/googleplay/android-developer/answer/6112435)) and, for the App Store,
+the paid Apple Developer Program, which lists App Store distribution among its membership benefits
+([Apple](https://developer.apple.com/programs/whats-included/)). Neither is needed to develop or try the template. Fill
+what applies, never guess values:
 
-- Android: `serviceAccountKeyPath` (keep the JSON out of git; `.gitignore` already covers `*service-account*.json` and `play-store-key*.json`) and `track` (start `internal`).
-  The very first upload must be done by hand in Play Console.
+- Android: `serviceAccountKeyPath` (keep the JSON out of git; `.gitignore` covers `*service-account*.json`, `serviceAccount*.json` and `play-store-key*.json`; a key downloaded from Google Cloud has a project-id name that none of these match, so rename it to `play-store-key.json`) and `track` (start `internal`).
+  The app record must exist in Play Console, and EAS needs the service-account key (uploaded to EAS, or via `serviceAccountKeyPath`); then the first `eas submit` creates the first internal-track release. A manual first upload is optional.
 - iOS: `ascAppId` (App Store Connect app id), Apple credentials via `bun run eas credentials` (interactive).
 
 ```bash
@@ -96,10 +102,13 @@ OTA is allowed only when the change is JS/assets and the fingerprint is unchange
 
 **OTA is NOT allowed (cut a new build) when you** added/removed/upgraded a native dependency or Expo SDK, added or
 changed a config plugin, changed `app.config.ts` native fields (bundle id, `scheme`, permissions, `intentFilters`,
-`associatedDomains`, icons, splash, `expo-notifications` plugin options), or changed `APP_ENV`. Publishing anyway
-reaches no one (or the wrong build).
+`associatedDomains`, icons, splash, `expo-notifications` plugin options), changed `APP_ENV`, or changed the EAS project
+id. The default fingerprint also hashes the whole `eas.json`, `.easignore` and `.gitignore` (`@expo/fingerprint` 0.20.14 `sourcer/Expo.js`) (observed: changing `submit`, `cli.version`,
+`channel`, `image` or `environment` changed the hash), so filling `submit.production` or adding `image`/`environment`
+also needs a new build. Publishing anyway reaches no one (or the wrong build).
 
-Check before publishing — compare the working tree to the build you target:
+Check before publishing — compare the working tree to the build you target. `fingerprint:generate` and `fingerprint:compare`
+upload a fingerprint and create a record on the EAS project (a server write), so they are not pre-approved and prompt under Claude Code's default permissions (no hook asks for them):
 
 ```bash
 APP_ENV=preview EXPO_PUBLIC_APP_ENV=preview \
@@ -126,7 +135,7 @@ APP_ENV=preview EXPO_PUBLIC_APP_ENV=preview \
 Use `production` / `production` for the production channel. `--environment` loads that environment's server-side
 variables (`EXPO_PUBLIC_API_URL`); local `.env*` files are ignored. Better long-term fix, ask the human: define
 `APP_ENV` and `EXPO_PUBLIC_APP_ENV` as plaintext EAS variables in each environment (`env-secrets` skill), so the
-prefix is no longer needed. Whether the shell value or the EAS variable wins on a conflict is unverified — keep them equal.
+prefix is no longer needed. On a conflict the EAS variable wins over a same-name shell variable for `eas update` (from eas-cli 24.11.0 source; not in the docs). For `eas build` the order is `eas.json` profile `env`, then EAS variables, then shell, and the CLI warns on overlap. Keep them equal.
 
 After publishing, check `bun run eas update:view <group-id>` and open the matching build to confirm it picks it up
 (cold launch twice: the update downloads on the first launch and applies on the next).
@@ -137,7 +146,7 @@ After publishing, check `bun run eas update:view <group-id>` and open the matchi
 # Gradual rollout, then widen or revert (same APP_ENV prefix as the publish above)
 APP_ENV=production EXPO_PUBLIC_APP_ENV=production \
   bun run eas update --channel production --environment production --rollout-percentage 10 --message "..."
-bun run eas update:edit            # widen (interactive)
+bun run eas update:edit <group-id> --rollout-percentage 50 --non-interactive   # widen
 bun run eas update:revert-update-rollout
 # Roll back (<group-id> must be the latest update on its branch + runtime version):
 # republishes the previous group, or the embedded bundle if there is none
@@ -157,14 +166,15 @@ APP_ENV=production EXPO_PUBLIC_APP_ENV=production \
 
 Use `update:republish` and the rollback commands only within one environment; add `--non-interactive` for a deterministic run.
 Flags verified against eas-cli 24.11.0 `--help`; re-run `--help` if the CLI has moved. `update:edit` and
-`channel:rollout` are interactive — hand over rather than loop.
+`channel:rollout` take flags (`channel:rollout <channel> --action --percent --non-interactive`) and are interactive only when
+args are omitted. Rollouts stay a human decision: hand over rather than loop.
 
 ## Known build failures
 
-- **EAS build fails in "Configure expo-updates" with "Runtime version mismatch"** and a `node_modules/<pkg>` fingerprint diff: a local Android build rewrote a library's `AndroidManifest.xml`. Keep `.fingerprintignore`. Debug other diffs with `bunx --no-install fingerprint fingerprint:generate --platform ios --debug`.
-- **A local iOS build fails in `expo-modules-jsi` with "cannot be annotated with either SWIFT_RETURNS_RETAINED…":** that is the toolchain, not the code. Local iOS builds need Xcode ≥ 26.4; upgrade Xcode or build on EAS. Do not patch `node_modules`.
+- **EAS build fails in "Configure expo-updates" with "Runtime version mismatch"** and a `node_modules/<pkg>` fingerprint diff: a local Android build rewrote a library's `AndroidManifest.xml`. Keep `.fingerprintignore`. Debug other diffs with the `fingerprint:compare` output (the raw `fingerprint` CLI hashes local gitignored `ios/` and `android/`, which eas-cli ignores for managed projects, so its hash will not match EAS).
+- **A local iOS build fails in `expo-modules-jsi` with "cannot be annotated with either SWIFT_RETURNS_RETAINED…":** that is the toolchain, not the code. This was seen with an older Xcode (observed, no documented minimum); the EAS `sdk-57` image uses Xcode 26.6, so upgrade Xcode or build on EAS. Building SDK 57 with Xcode 27 / the iOS 27 SDK needs `ios: { enableSceneSupport: true }` in the existing `expo-build-properties` plugin entry in `app.config.ts` (expo ≥ 57.0.23), or the app does not launch correctly on iOS 27. Do not patch `node_modules`.
 - **A release build without `EXPO_PUBLIC_APP_ENV` counts as production**, so the mock sign-in refuses it and `env.ts` requires https. Local release builds for e2e or perf runs set `EXPO_PUBLIC_APP_ENV=development`.
-- **EAS Update is off until `EAS_PROJECT_ID` is set in `app.config.ts`.** The URL `scheme` must stay lowercase: uppercase breaks EAS Update publishing.
+- **EAS Update is off until `EAS_PROJECT_ID` is set** (shell for `bun run eas ...`, `.env` for Expo CLI; EAS build workers set `EAS_BUILD_PROJECT_ID`, and whether the worker's config evaluation sees it is UNVERIFIED until a first EAS build). Local and worker must resolve the same id: it is a fingerprint input. Expo requires the URL `scheme` to be lowercase.
 
 ## Report
 

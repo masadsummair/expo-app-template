@@ -18,7 +18,7 @@ Never combine RNFB's SPM mode with static frameworks. RNFB's docs say `pod insta
 
 ## Evidence
 
-Spike S2 ran on 2026-10-15. It used EAS iOS simulator Release builds with no dev client, Expo SDK 57.0.28, RN 0.86.3, RNFB 26.4.0, Sentry ~7.11, MMKV 4.3.2, Nitro 0.37.1, Reanimated 4.5.1 and a placeholder Firebase config. The builds were A `d4f940e2-45d0-4dcf-ae34-f560a4021b23` and B `6f7d6277-7339-44a3-82dd-4c1a69a10870`.
+Spike S2 ran on 2026-10-15. It used EAS iOS simulator Release builds with no dev client, Expo SDK 57.0.28, RN 0.86.3, RNFB 26.4.0, Sentry ~7.11, MMKV 4.3.2, Nitro 0.37.1, Reanimated 4.5.1 and a placeholder Firebase config. The builds were named A and B below.
 
 Both built at the first attempt and launched to the sign-in screen. `getApp()` returned `[DEFAULT]`, and neither had crashed after 12 s.
 
@@ -29,7 +29,7 @@ With precompiled modules on (the default from SDK 56), Expo links about 85 RN, E
 
 ## Consequences
 
-- **Privacy manifests.** Apple does not merge the privacy manifests of static pods. B's build ships Firebase privacy bundles that declare UserDefaults reasons `C56D.1` (GoogleUtilities) and `1C8F.1` (FirebaseCoreInternal), on top of the `CA92.1` the app already lists. PR7 must add both to `ios.privacyManifests` and re-check Firebase's bundles. `bun run privacy:check` only scans `node_modules`, so it cannot see CocoaPods manifests.
+- **Privacy manifests.** Expo's guide says Apple "does not correctly parse all the PrivacyInfo files included by static CocoaPods dependencies" ([Expo](https://docs.expo.dev/guides/apple-privacy/)), so the reasons go in the app's own manifest. B's build ships Firebase privacy bundles that declare UserDefaults reasons `C56D.1` (GoogleUtilities) and `1C8F.1` (FirebaseCoreInternal), on top of the `CA92.1` the app already lists. PR7 must add both to `ios.privacyManifests` and re-check Firebase's bundles. The template's manifest already lists `C617.1`, which GoogleUtilities on its main branch also declares as FileTimestamp, so no change is needed for it (the pinned version was not checked). `bun run privacy:check` only scans `node_modules`, so it cannot see CocoaPods manifests.
 - **More RNFB modules.** Adding another RNFB module means adding it to `forceStaticLinking` too.
 - **What S2 did not cover**, all still open:
   - real Firebase auth with a real project;

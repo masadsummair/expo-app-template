@@ -50,8 +50,10 @@ create `.env` for local dev.
 
 ## 4. EAS variable
 
-`eas.json` profiles map to EAS environments: `development*` → `development`, `preview` → `preview`,
-`production` → `production`. A value must exist in each environment whose builds need it:
+EAS picks a build's environment from the profile: `environment` if set, else `distribution: store` → `production`,
+`developmentClient` → `development`, otherwise `preview` (from eas-cli 24.11.0 source and the EAS docs). For today's four
+profiles that reads `development*` → `development`, `preview` → `preview`, `production` → `production`. A value must exist
+in each environment whose builds need it:
 
 (Blocks are bash; in PowerShell replace the trailing `\` with a backtick or put the command on one line.)
 
@@ -63,8 +65,9 @@ bun run eas env:list --environment preview        # verify (never add --include-
 
 Writing to `production` is a human gate: show the exact command and wait. Rules:
 
-- `EXPO_PUBLIC_*` must be `plaintext` or `sensitive`. `secret` values are not readable while `app.config.ts` is
-  evaluated and must not carry the prefix — it would be `undefined` at build time (the CLI may reject it; do not rely on that).
+- `EXPO_PUBLIC_*` must be `plaintext` or `sensitive`. `secret` variables are absent from EAS CLI config resolution,
+  `eas update` and `env:pull`; they are provided only to EAS Build and EAS Workflows jobs ([Expo](https://docs.expo.dev/eas/environment-variables/)). A `secret` `EXPO_PUBLIC_*` would therefore be
+  `undefined` when `app.config.ts` is evaluated locally, and a guard like step 5's throws. Do not give it the prefix.
 - `secret` is for build-job credentials only (row 2 above).
 - Local values: the human runs `bun run eas env:pull --environment development --path .env.local` in their own
   terminal (a hook denies any `.env*` path in agent commands). Never print or read the file. `secret` variables are not pulled.
@@ -89,6 +92,14 @@ Never read a `secret` variable in `app.config.ts`, and never copy any env value 
 Both are set in each `eas.json` profile `env`. `APP_ENV` selects bundle ids in `app.config.ts`; `EXPO_PUBLIC_APP_ENV` is
 read by `env.ts`. `eas update` does not read the profile `env`, so pass both on the command line (see the `release`
 skill) or define them as plaintext EAS variables per environment. Do not change them without asking.
+
+## The EAS project id: `EAS_PROJECT_ID`
+
+A plain variable, not secret and not `EXPO_PUBLIC_`. `app.config.ts` writes it into `extra.eas.projectId` and
+`updates.url`, so it ships in the app config. That is the one deliberate exception to "never copy an env value into
+`extra`", and it is fine because the id is public (it is in the update URL). `.env.example` carries only an empty
+`EAS_PROJECT_ID=`; the real value never goes into git. Expo CLI reads it from your gitignored `.env`; EAS CLI does not
+read `.env`, so set it in the shell for `bun run eas ...` (bash `export`, PowerShell `$env:`; per terminal or in a shell profile; `docs/setup.md` step 4).
 
 ## 6. Verify
 

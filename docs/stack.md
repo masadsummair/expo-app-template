@@ -65,7 +65,7 @@
 | EAS Build / Submit / Update (`bun run eas`) | cloud builds, store submission, OTA updates; eas-cli pinned to one version |
 | expo-dev-client                             | the development build you run day to day                                   |
 | expo-build-properties                       | R8 minification and resource shrinking for Android release builds          |
-| `@expo/fingerprint`                         | runtime versions and the "native change, no OTA" gate                      |
+| `@expo/fingerprint`                         | runtime versions and the "native change, no OTA" check                     |
 | expo-doctor                                 | dependency and config checks                                               |
 
 ### Testing and quality

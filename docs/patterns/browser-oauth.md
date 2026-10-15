@@ -29,14 +29,14 @@ if (params.get('state') !== state) throw new Error('State mismatch');
 // POST params.get('code') and verifier to the token endpoint.
 ```
 
-`base64Url` and `buildAuthorizeUrl` are small helpers you write. UNVERIFIED: the exact `expo-crypto` digest signature at your SDK version; read the versioned docs.
+`base64Url` and `buildAuthorizeUrl` are small helpers you write. The `expo-crypto` calls match SDK 57: `digest(algorithm, data: BufferSource): Promise<ArrayBuffer>` and `getRandomBytes(n): Uint8Array` ([source](https://github.com/expo/expo/blob/sdk-57/packages/expo-crypto/src/Crypto.ts)). `URL.searchParams` is polyfilled by Expo's runtime (`expo/src/winter/url.ts`). Re-check both at other SDK versions.
 
 ## Limitations
 
 - iOS shows a system prompt ("wants to use ... to sign in") before the browser opens, and the flow leaves the app, so it feels slower than a native sheet.
-- A custom URL scheme can be claimed by another app. Prefer universal links or Android App Links for the redirect where the provider allows it.
+- A custom URL scheme can be claimed by another app. Prefer universal links or Android App Links for the redirect where the provider allows it. Google no longer supports custom URI scheme redirects on Android ([Google](https://developers.google.com/identity/protocols/oauth2/native-app)).
 - Google blocks embedded WebViews. Use the system browser session only.
-- App Review Guideline 4.8 still applies if you offer a third-party login on iOS.
+- App Review Guideline 4.8 can still apply if a third-party login sets up or authenticates the user's primary account on iOS, with exemptions (see `docs/auth/apple-setup.md`).
 - Nonce and audience handling depend on the provider. Verify the backend accepts the token you get.
 
 ## Scope

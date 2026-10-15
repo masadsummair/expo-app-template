@@ -7,7 +7,7 @@ license: MIT
 
 # App Store Deployment
 
-> **Template override:** Run EAS CLI as `bun run eas <command>` (the `eas` script pins eas-cli; Expo advises against installing it in the project) wherever this skill shows bare `eas`, `npx eas-cli@latest` or `npm install -g eas-cli`; do not install it globally. `npx testflight` is macOS-only; elsewhere use `eas build` then `eas submit`. Release steps for this template are in the `release` skill; it wins on conflict.
+> **Template override:** Run EAS CLI as `bun run eas <command>` wherever this skill shows bare `eas`, `npx eas-cli@latest` or `npm install -g eas-cli`; do not install it globally. This template never uses `npx` (AGENTS.md; in Claude Code a guard hook denies it), so use `bun run eas build` then `bun run eas submit` instead of `npx testflight`. Release steps for this template are in the `release` skill; it wins on conflict.
 
 > **EAS service - costs apply.** Cloud builds use EAS plan resources, and EAS services have free-tier and paid-plan limits. Apple Developer and Google Play memberships are separate. Check https://expo.dev/pricing for the requested service.
 

@@ -64,7 +64,7 @@ Re-apply these after every refresh.
 11. **expo-upgrade/SKILL.md:** added a template override (`bunx`, `bun run doctor`, PowerShell cache reset, no
     `watchman`/`pod` on Windows, no AsyncStorage replacement).
 12. **eas-app-stores, eas-update:** added a template override (`bun run eas`, no global install, no
-    `@latest`, `npx testflight` is macOS-only). Removed references to skills that are not vendored
+    `@latest`, `eas build` + `eas submit` instead of `npx testflight`). Removed references to skills that are not vendored
     (`eas-hosting`, `eas-workflows`, `eas-update-insights`, `expo-brownfield`) from the `description` fields,
     `SKILL.md` and `references/workflows.md`.
 13. **react-native-best-practices/SKILL.md:** added a template override (`bunx`, `bunx expo install`, macOS-only
