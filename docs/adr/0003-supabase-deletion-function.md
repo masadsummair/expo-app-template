@@ -15,7 +15,7 @@ Ship one SQL migration, `supabase/migrations/<timestamp>_delete_current_user.sql
 - the function deletes only the row for `auth.uid()`;
 - `execute` is revoked from `public` and `anon`.
 
-The client deletes an account in three steps: call the RPC, call Google `revokeAccess()`, then sign out locally.
+The client deletes an account in three steps: call the RPC, call Google `revokeAccess()`, then sign out locally. `revokeAccess()` is best effort: its failure never stops the local sign-out. On iOS it needs a current user. ADR 0004 (Sign-out) gives the per-platform steps to get one, including discarding the cached token that `signIn()` returns.
 
 ## Consequences
 
