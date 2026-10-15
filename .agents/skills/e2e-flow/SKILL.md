@@ -85,7 +85,7 @@ bunx --no-install e2e list               # which tests would run, no device need
 
 - Metro: `e2e.config.ts` starts it, or reuses the one already running on :8081. Do not pass flags after `--` to a script; call `bunx --no-install e2e run ...` directly.
 - Telemetry is on by default upstream. The scripts and `.mcp.json` set `E2E_TELEMETRY_DISABLED=1`; export it when running `bunx e2e` by hand. Do not run `e2e feedback` (it sends data off the machine).
-- `release` mode (`E2E_BUILD=release`) checks a release build: a release-style build with the bundle embedded, no Metro, no dev launcher. A dev build cannot run in CI.
+- `release` mode (`E2E_BUILD=release`) checks a release build: a release-style build with the bundle embedded, no Metro, no dev launcher. Upstream CI recipes do not start Metro; a job that starts Metro could run a dev build (inferred, not tested).
 
 ## Check other device sizes (UI changes)
 

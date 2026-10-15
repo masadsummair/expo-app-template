@@ -33,7 +33,8 @@ a hook denies `npx`, `npm`, and `bun add`.
    Linux skip it, mark local iOS builds unavailable and plan `bun run eas build --profile development --platform ios`
    (ask first, it spends quota). On every OS check the JDK and Android SDK. Compare Node with the `node` pin in `eas.json`
    (and the `image` alias if set) and with the e2e floor in the `e2e-flow` skill; report if `build.base.node` is below it.
-   The required Xcode comes from the vendored skill's version notes and `docs/setup.md`. If local Xcode is
+   No skill or doc names a minimum Xcode. Use the SDK changelog and Expo's build infrastructure page (the Xcode of
+   the EAS SDK image) as the reference. If local Xcode is
    too old, plan EAS cloud builds for iOS; do not try to work around it, and do not patch native code.
 4. **Upgrade.**
    ```bash

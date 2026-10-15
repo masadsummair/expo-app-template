@@ -6,7 +6,7 @@
 | -------------- | --------------------------------------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------- |
 | Always         | bun ≥ 1.3.7, Node ≥ 22.12, Git                                                          | same                          | same, plus Git for Windows (Claude Code uses its bash)          |
 | Android        | Android Studio + SDK and its JDK                                                        | same                          | same; keep the repo path short (long paths break native builds) |
-| iOS            | Xcode ≥ 26.4 (older toolchains fail, see "Known build failures" in the `release` skill) | EAS cloud build only          | EAS cloud build only                                            |
+| iOS            | Xcode (EAS `sdk-57` image uses 26.6; see "Known build failures" in the `release` skill) | EAS cloud build only          | EAS cloud build only                                            |
 | `ANDROID_HOME` | `~/Library/Android/sdk`                                                                 | `~/Android/Sdk`               | `%LOCALAPPDATA%\Android\Sdk`                                    |
 | `JAVA_HOME`    | `/Applications/Android Studio.app/Contents/jbr/Contents/Home`                           | Android Studio's `jbr` folder | `C:\Program Files\Android\Android Studio\jbr`                   |
 | e2e tests      | iOS and Android                                                                         | Android                       | inside WSL2 (upstream: "On Windows, run inside WSL")            |
@@ -26,15 +26,16 @@
   (`bun run eas build --profile development-device --platform ios`; always pass `--profile`, the default is production).
   Android needs a JDK (Android Studio's works) and `ANDROID_HOME`; keep the repo path short on Windows.
 - Node ≥ 22.12 and bun ≥ 1.3.7 (`engines`); `.node-version` pins Node 24. Claude hooks run on bun: no `jq`, no bash.
-- Verified on macOS (iOS simulator, Android emulator); the checks have also passed on Windows and Linux. There is no
+- Verified on macOS (iOS simulator, Android emulator). Windows and Linux ran the checks in GitHub Actions CI until it was
+  removed on 2026-10-07; not re-checked since. There is no
   CI/CD (add your own if you want it): `.githooks/pre-commit` runs `bun run verify` before every commit (`bun install`
   enables it). Run `bun run doctor` and the e2e suite yourself before a release.
 
 **Accounts**
 
-- [Expo](https://expo.dev) for EAS. The free tier covers Android development builds.
-- Apple Developer Program (paid) for iOS device builds and the App Store. The iOS simulator on a Mac doesn't need it.
-- Optional: Google Play, Sentry, and a model for the AI steps in e2e tests ([testing.md](testing.md#ai-steps)).
+- [Expo](https://expo.dev) for EAS. The Free plan includes a monthly allowance of Android and iOS builds and of update users; see [expo.dev/pricing](https://expo.dev/pricing) for the current limits.
+- The base template (with the mock sign-in) needs no paid account on a simulator or emulator. The Apple Developer Program (paid) is needed to install on a physical iPhone via EAS or to publish, and for capabilities such as Sign in with Apple, App Attest, push notifications and associated domains (universal links); see Apple's [capabilities table](https://developer.apple.com/help/account/reference/supported-capabilities-ios). Google Play Console (paid registration) is needed only to publish (and for App Check Play Integrity).
+- Optional: Sentry, and a model for the AI steps in e2e tests ([testing.md](testing.md#ai-steps)).
 
 ## Start a new app
 
@@ -65,11 +66,17 @@
    This sets the bundle id, display name, slug and URL scheme in `app.config.ts` and `e2e/support/build-mode.ts`, the
    package name, the README title, and the example ids in specs, skills and agents. Then run `bun install` and
    `bun run skills:sync`. If `ios/` or `android/` already exist, run `bunx expo prebuild --clean` afterwards.
-3. **Connect EAS:** `bun run eas login`, then `bun run eas init`. Paste the printed project id into `EAS_PROJECT_ID` in
-   `app.config.ts` (`eas init` can't edit a dynamic config). That also turns on EAS Update.
-4. **Set env vars:** `cp .env.example .env` (PowerShell: `Copy-Item .env.example .env`) and set `EXPO_PUBLIC_API_URL`
+3. **Set env vars:** `cp .env.example .env` (PowerShell: `Copy-Item .env.example .env`) and set `EXPO_PUBLIC_API_URL`
    for local development. For preview and production, add `EXPO_PUBLIC_API_URL` (https) as an EAS environment
-   variable: `.env` is never uploaded, and those builds fail fast without it.
+   variable: `.env` is not uploaded while the ignore file EAS uses lists `.env*` (`.easignore` if it exists, which then replaces `.gitignore`; otherwise `.gitignore`; [Expo](https://docs.expo.dev/build-reference/easignore/)), and those builds fail fast without it.
+4. **Connect EAS (optional until the first cloud build or OTA update; `bun run ios` and `bun run android` don't need it):**
+   `bun run eas login`, then `bun run eas init`. It links or creates the project and prints the id, then errors because it
+   can't edit a dynamic config. Put the id in your `.env` from step 3 as `EAS_PROJECT_ID` (Expo CLI reads it), and also set it
+   in your shell, because EAS CLI doesn't read `.env`: `export EAS_PROJECT_ID=<id>` (PowerShell:
+   `$env:EAS_PROJECT_ID = '<id>'`). Set it in every new terminal, or add it to your shell profile. Every
+   project-scoped EAS command (build, update, env, fingerprint) needs it, and it turns on EAS Update. If it is missing, an
+   interactive EAS command offers to create a new EAS project: answer no, or you get a stray project on your account (from
+   eas-cli 24.11.0 source). The template commits no id.
 5. **First run.** It's a development build, not Expo Go, and the first build takes several minutes.
    - macOS: `bun run ios` or `bun run android`.
    - Linux / Windows: start an Android emulator or plug in a device with USB debugging, then `bun run android`.

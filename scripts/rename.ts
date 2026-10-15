@@ -187,7 +187,7 @@ console.log(
     'Next:',
     '  1. bun install && bun run skills:sync (package name in bun.lock; renamed ids in the .agents/skills copy).',
     '  2. If ios/ or android/ exist, regenerate them: bunx --no-install expo prebuild --clean (or delete both folders).',
-    '  3. bun run eas login, then bun run eas init, and put the project id in EAS_PROJECT_ID in app.config.ts.',
+    '  3. When you need EAS: copy .env.example to .env first (docs/setup.md), then bun run eas login and bun run eas init, and put the project id in .env as EAS_PROJECT_ID (and export it in your shell for bun run eas).',
     '  4. Update the LICENSE copyright line if you want; keep the notices in THIRD_PARTY_NOTICES.md.',
     '  5. bun run verify',
   ].join('\n'),

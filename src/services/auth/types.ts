@@ -15,7 +15,7 @@ export interface AuthProvider {
   onChange(cb: (user: AuthUser | null) => void): () => void;
   /** Resolves 'cancelled' when the user dismisses the sheet; rejects on a real failure. */
   signInWithGoogle(): Promise<SignInResult>;
-  /** iOS only: Apple requires it wherever Google sign-in is offered on iOS (App Review 4.8). */
+  /** iOS only: App Review 4.8 requires an equivalent privacy-focused login next to Google sign-in for the primary account (see docs/auth/apple-setup.md). */
   signInWithApple(): Promise<SignInResult>;
   /** Clears the local session even when the network or the keychain call fails. */
   signOut(): Promise<void>;
