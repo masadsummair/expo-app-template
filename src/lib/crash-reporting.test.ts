@@ -184,7 +184,7 @@ describe('scrubEvent', () => {
     expect(scrubEvent(event({ message })).message).toBe(expected);
   });
 
-  it.each(['?page=2', '?monkey=1', '?zipcode=12345'])(
+  it.each(['?page=2', '?monkey=1', '?zipcode=12345', '?nonces=1', '?nonce_hash=1'])(
     'leaves %s unchanged: a name that only contains a secret word is not a secret',
     (message) => {
       expect(scrubEvent(event({ message })).message).toBe(message);
@@ -239,16 +239,22 @@ describe('scrubEvent', () => {
     });
   });
 
-  it.each(['code_verifier', 'oobCode', 'signature', 'auth_code'])(
-    'filters %s the same way as an object key, as JSON text and as a URL param',
-    (key) => {
-      const scrubbed = scrubEvent(
-        event({ extra: { [key]: 'a' }, message: `{"${key}":"a"} ?${key}=a` }),
-      );
-      expect(scrubbed.extra).toEqual({ [key]: '[Filtered]' });
-      expect(scrubbed.message).toBe(`{"${key}":"[Filtered]"} ?${key}=[Filtered]`);
-    },
-  );
+  // A raw nonce plus its ID token can be replayed against the backend until the token expires (ADR 0004).
+  it.each([
+    'code_verifier',
+    'oobCode',
+    'signature',
+    'auth_code',
+    'nonce',
+    'rawNonce',
+    'hashed_nonce',
+  ])('filters %s the same way as an object key, as JSON text and as a URL param', (key) => {
+    const scrubbed = scrubEvent(
+      event({ extra: { [key]: 'a' }, message: `{"${key}":"a"} ?${key}=a` }),
+    );
+    expect(scrubbed.extra).toEqual({ [key]: '[Filtered]' });
+    expect(scrubbed.message).toBe(`{"${key}":"[Filtered]"} ?${key}=[Filtered]`);
+  });
 
   it.each([
     '(token=abc)',

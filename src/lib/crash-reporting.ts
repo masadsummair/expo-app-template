@@ -16,7 +16,7 @@ const PARAM = /((?:^|[^\w.-])([\w.-]+)=)[^&#\s,"')\]}]*/g;
 // Matched at the end of the name, so prefixed names count too (`client_secret`, `x_api_key`, `csrf_token`).
 // No bare `key`: it would catch `monkey`, and Google browser keys are public anyway.
 const SECRET_NAME =
-  /(?:api[-_]?key|token|secret|password|passwd|session[-_]?id|verifier|signature|sig|jwt|otp)$/i;
+  /(?:api[-_]?key|token|secret|password|passwd|session[-_]?id|verifier|signature|sig|jwt|otp|nonce)$/i;
 // `code`, `email` and `session` only as a whole word or after a separator (`auth_code`), or camelCase
 // `Code` (`oobCode`), so `zipcode` stays readable.
 const SECRET_WORD = /(?:^|[_.-])(?:code|email|session)$/i;

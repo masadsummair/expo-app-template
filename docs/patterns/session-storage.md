@@ -9,7 +9,9 @@ Some auth SDKs keep the session (access token, refresh token, user object) as on
 - **SecureStore (Keychain / Keystore).** Hardware-backed, but it holds small values: Expo documents a size limit of about 2 KB per value (UNVERIFIED: current limit). A session with user metadata can exceed it, so the adapter splits the value into chunks.
 - **MMKV encrypted with a key kept in SecureStore.** The key is small, so it fits. MMKV reads are synchronous (no async restore flicker) and have no practical size limit. This is the option planned for the Supabase variant (ADR 0006).
 
-Use the `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY` accessibility for the SecureStore entries: readable in a background launch after the first unlock, and never restored to another device from a backup.
+Use the `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY` accessibility for the SecureStore entries. They are readable in a background launch after the first unlock, and on iOS never restored to another device from a backup. Android ignores that option; the `expo-secure-store` plugin's backup rules keep SecureStore out of Android backups instead (ADR 0006).
+
+Encrypted storage does not cover the HTTP cache. On iOS, the default URL cache kept a plain-text copy of a Supabase sign-in request and response in `Cache.db` (ADR 0004). Disable the URL cache too, as the Supabase variant does.
 
 ## Example
 
