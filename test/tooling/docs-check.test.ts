@@ -47,7 +47,7 @@ describe('docs:check standards block', () => {
     const doc = readFileSync(join(root, 'docs/standards.md'), 'utf8');
     writeFileSync(
       join(root, 'docs/standards.md'),
-      doc.replace('Variant: base', 'Variant: hand-edited'),
+      doc.replace(/Variant: \w+/, 'Variant: hand-edited'),
     );
     const r = checkDocs(root);
     expect(r.code).toBe(1);

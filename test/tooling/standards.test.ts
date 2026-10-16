@@ -25,10 +25,11 @@ const rule = (extra: object = {}) => ({
 });
 
 describe('loadStandards', () => {
-  test('loads the real files: 13 core rules, variant base', () => {
+  test('loads the real files: 13 core rules and the branch variant', () => {
     const s = loadStandards(ROOT);
     expect(Object.keys(s.core.rules)).toHaveLength(13);
-    expect(s.variant).toEqual({ variant: 'base', rules: {} });
+    for (const id of Object.keys(s.variant.rules))
+      expect(id.startsWith(`${s.variant.variant}.`)).toBe(true);
   });
 
   test('names the file when a rule is missing its why', () => {
@@ -69,9 +70,12 @@ describe('renderStandards', () => {
     expect(md).toContain('- Enforced by: script: docs:check');
     expect(md).toContain('- Enforced by: agent: mobile-security-auditor');
     expect(md).toContain('- Enforced by: human');
-    // design.json is empty here and gains five rules in PR4: count what is on disk, do not hard-code it.
+    // Count what is on disk; never hard-code the design or variant rule counts.
     const design = Object.keys(base.design.rules).length;
-    expect(md).toContain(`Rules: ${13 + design} (core 13, design ${design}, variant 0)`);
+    const variant = Object.keys(base.variant.rules).length;
+    expect(md).toContain(
+      `Rules: ${13 + design + variant} (core 13, design ${design}, variant ${variant})`,
+    );
   });
 
   test('is independent of JSON key order and ends with exactly one newline', () => {
